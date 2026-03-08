@@ -120,6 +120,17 @@ export type CodeEditorSettingsState = {
   fontSize: string;
 };
 
+export type TerminalSettings = {
+  enabled: boolean;
+};
+
+export type PlainShellSettings = {
+  claude: boolean;
+  cursor: boolean;
+  codex: boolean;
+  gemini: boolean;
+};
+
 export type SettingsStoragePayload = {
   claude: ClaudePermissionsState & { projectSortOrder: ProjectSortOrder; lastUpdated: string };
   cursor: CursorPermissionsState & { lastUpdated: string };

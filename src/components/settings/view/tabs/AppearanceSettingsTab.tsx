@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle } from 'lucide-react';
 import { DarkModeToggle } from '../../../../shared/view/ui';
-import type { CodeEditorSettingsState, ProjectSortOrder } from '../../types/types';
+import type { CodeEditorSettingsState, ProjectSortOrder, TerminalSettings } from '../../types/types';
 import LanguageSelector from '../../../../shared/view/ui/LanguageSelector';
 
 type AppearanceSettingsTabProps = {
@@ -13,6 +15,8 @@ type AppearanceSettingsTabProps = {
   onCodeEditorShowMinimapChange: (value: boolean) => void;
   onCodeEditorLineNumbersChange: (value: boolean) => void;
   onCodeEditorFontSizeChange: (value: string) => void;
+  terminalSettings: TerminalSettings;
+  onTerminalEnabledChange: (value: boolean) => void;
 };
 
 type ToggleCardProps = {
@@ -70,9 +74,31 @@ export default function AppearanceSettingsTab({
   onCodeEditorShowMinimapChange,
   onCodeEditorLineNumbersChange,
   onCodeEditorFontSizeChange,
+  terminalSettings,
+  onTerminalEnabledChange,
 }: AppearanceSettingsTabProps) {
   const { t } = useTranslation('settings');
   const codeEditorThemeLabel = t('appearanceSettings.codeEditor.theme.label');
+  const [showTerminalWarning, setShowTerminalWarning] = useState(false);
+
+  const handleTerminalToggle = () => {
+    if (!terminalSettings.enabled) {
+      // 打开时显示警告
+      setShowTerminalWarning(true);
+    } else {
+      // 关闭时直接关闭
+      onTerminalEnabledChange(false);
+    }
+  };
+
+  const handleConfirmTerminalEnable = () => {
+    onTerminalEnabledChange(true);
+    setShowTerminalWarning(false);
+  };
+
+  const handleCancelTerminalEnable = () => {
+    setShowTerminalWarning(false);
+  };
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -93,6 +119,72 @@ export default function AppearanceSettingsTab({
       <div className="space-y-4">
         <LanguageSelector />
       </div>
+
+      {/* Terminal Settings */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">{t('appearanceSettings.terminal.title')}</h3>
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium text-foreground">{t('appearanceSettings.terminal.enable.label')}</div>
+              <div className="text-sm text-muted-foreground">
+                {t('appearanceSettings.terminal.enable.description')}
+              </div>
+            </div>
+            <button
+              onClick={handleTerminalToggle}
+              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${
+                terminalSettings.enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+              }`}
+              role="switch"
+              aria-checked={terminalSettings.enabled}
+              aria-label={t('appearanceSettings.terminal.enable.label')}
+            >
+              <span className="sr-only">{t('appearanceSettings.terminal.enable.label')}</span>
+              <span
+                className={`${
+                  terminalSettings.enabled ? 'translate-x-7' : 'translate-x-1'
+                } flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow-lg transition-transform duration-200`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Terminal Warning Modal */}
+      {showTerminalWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <div className="mb-4 flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-yellow-500" />
+              <h3 className="text-lg font-semibold text-foreground">
+                {t('appearanceSettings.terminal.warning.title')}
+              </h3>
+            </div>
+            <div className="mb-6 space-y-2 text-sm text-muted-foreground">
+              <p>{t('appearanceSettings.terminal.warning.message1')}</p>
+              <p>{t('appearanceSettings.terminal.warning.message2')}</p>
+              <p className="font-medium text-yellow-600 dark:text-yellow-500">
+                {t('appearanceSettings.terminal.warning.message3')}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelTerminalEnable}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {t('appearanceSettings.terminal.warning.cancel')}
+              </button>
+              <button
+                onClick={handleConfirmTerminalEnable}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                {t('appearanceSettings.terminal.warning.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">

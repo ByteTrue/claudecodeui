@@ -117,6 +117,21 @@
       "alphabetical": "按字母顺序",
       "recentActivity": "最近活动"
     },
+    "terminal": {
+      "title": "终端",
+      "enable": {
+        "label": "启用终端功能",
+        "description": "允许在应用中使用系统终端（需要确认风险）"
+      },
+      "warning": {
+        "title": "安全警告",
+        "message1": "启用终端功能将允许在应用中执行系统命令。",
+        "message2": "这可能带来安全风险，请确保您了解正在执行的命令。",
+        "message3": "请仅在受信任的环境中使用此功能。",
+        "confirm": "我了解风险，启用终端",
+        "cancel": "取消"
+      }
+    },
     "codeEditor": {
       "title": "代码编辑器",
       "theme": {
@@ -318,6 +333,10 @@
       "reAuthDescription": "使用其他账户登录或刷新凭据",
       "button": "登录",
       "reLoginButton": "重新登录"
+    },
+    "plainShell": {
+      "label": "启用普通命令行模式",
+      "description": "启用后，Shell 将以普通命令行模式运行，不连接 AI 会话"
     },
     "error": "错误：{{error}}"
   },

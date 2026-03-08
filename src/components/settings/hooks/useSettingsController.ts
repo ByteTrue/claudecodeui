@@ -23,6 +23,7 @@ import type {
   ProjectSortOrder,
   SettingsMainTab,
   SettingsProject,
+  TerminalSettings,
 } from '../types/types';
 
 type ThemeContextValue = {
@@ -96,6 +97,10 @@ type CodexSettingsStorage = {
   permissionMode?: CodexPermissionMode;
 };
 
+type GeminiSettingsStorage = {
+  permissionMode?: GeminiPermissionMode;
+};
+
 type ActiveLoginProvider = AgentProvider | '';
 
 const KNOWN_MAIN_TABS: SettingsMainTab[] = ['agents', 'appearance', 'git', 'api', 'tasks'];
@@ -139,6 +144,10 @@ const readCodeEditorSettings = (): CodeEditorSettingsState => ({
   showMinimap: localStorage.getItem('codeEditorShowMinimap') !== 'false',
   lineNumbers: localStorage.getItem('codeEditorLineNumbers') !== 'false',
   fontSize: localStorage.getItem('codeEditorFontSize') ?? DEFAULT_CODE_EDITOR_SETTINGS.fontSize,
+});
+
+const readTerminalSettings = (): TerminalSettings => ({
+  enabled: localStorage.getItem('terminalEnabled') === 'true',
 });
 
 const mapCliServersToMcpServers = (servers: McpCliServer[] = []): McpServer[] => (
@@ -197,6 +206,9 @@ export function useSettingsController({ isOpen, initialTab, projects, onClose }:
   const [projectSortOrder, setProjectSortOrder] = useState<ProjectSortOrder>('name');
   const [codeEditorSettings, setCodeEditorSettings] = useState<CodeEditorSettingsState>(() => (
     readCodeEditorSettings()
+  ));
+  const [terminalSettings, setTerminalSettings] = useState<TerminalSettings>(() => (
+    readTerminalSettings()
   ));
 
   const [claudePermissions, setClaudePermissions] = useState<ClaudePermissionsState>(() => (
@@ -665,7 +677,7 @@ export function useSettingsController({ isOpen, initialTab, projects, onClose }:
       );
       setCodexPermissionMode(toCodexPermissionMode(savedCodexSettings.permissionMode));
 
-      const savedGeminiSettings = parseJson<{ permissionMode?: GeminiPermissionMode }>(
+      const savedGeminiSettings = parseJson<GeminiSettingsStorage>(
         localStorage.getItem('gemini-settings'),
         {},
       );
@@ -700,7 +712,7 @@ export function useSettingsController({ isOpen, initialTab, projects, onClose }:
     void checkAuthStatus(loginProvider);
   }, [checkAuthStatus, loginProvider]);
 
-  const saveSettings = useCallback(() => {
+  const saveSettings = useCallback(async () => {
     setIsSaving(true);
     setSaveStatus(null);
 
@@ -751,6 +763,7 @@ export function useSettingsController({ isOpen, initialTab, projects, onClose }:
     cursorPermissions.allowedCommands,
     cursorPermissions.disallowedCommands,
     cursorPermissions.skipPermissions,
+    geminiPermissionMode,
     onClose,
     projectSortOrder,
   ]);
@@ -761,6 +774,11 @@ export function useSettingsController({ isOpen, initialTab, projects, onClose }:
     },
     [],
   );
+
+  const updateTerminalSetting = useCallback((enabled: boolean) => {
+    setTerminalSettings({ enabled });
+    localStorage.setItem('terminalEnabled', String(enabled));
+  }, []);
 
   const openMcpForm = useCallback((server?: McpServer) => {
     setEditingMcpServer(server || null);
@@ -823,6 +841,8 @@ export function useSettingsController({ isOpen, initialTab, projects, onClose }:
     setProjectSortOrder,
     codeEditorSettings,
     updateCodeEditorSetting,
+    terminalSettings,
+    updateTerminalSetting,
     claudePermissions,
     setClaudePermissions,
     cursorPermissions,

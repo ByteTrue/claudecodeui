@@ -482,6 +482,26 @@ app.post('/api/system/update', authenticateToken, async (req, res) => {
     }
 });
 
+// Get terminal settings (platform and shell preference)
+app.get('/api/terminal/settings', authenticateToken, async (req, res) => {
+    try {
+        const platform = os.platform();
+
+        // Use system default shell (same as AI Shell)
+        const defaultShell = platform === 'win32' ? 'powershell' : 'bash';
+
+        res.json({
+            platform,
+            shellPreference: defaultShell,
+            availableShells: platform === 'win32'
+                ? ['powershell', 'cmd']
+                : ['bash', 'zsh', 'fish', 'sh']
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/projects', authenticateToken, async (req, res) => {
     try {
         const projects = await getProjects(broadcastProgress);
@@ -1400,6 +1420,8 @@ wss.on('connection', (ws, request) => {
 
     if (pathname === '/shell') {
         handleShellConnection(ws);
+    } else if (pathname === '/terminal') {
+        handleTerminalConnection(ws);
     } else if (pathname === '/ws') {
         handleChatConnection(ws);
     } else {
@@ -1596,6 +1618,89 @@ function handleChatConnection(ws) {
     });
 }
 
+// Handle terminal WebSocket connections (plain shell only, no AI)
+function handleTerminalConnection(ws) {
+    console.log('💻 Terminal client connected');
+    let terminalProcess = null;
+
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message);
+            console.log('📨 Terminal message received:', data.type);
+
+            if (data.type === 'init') {
+                const projectPath = data.projectPath || process.cwd();
+                const termCols = data.cols || 80;
+                const termRows = data.rows || 24;
+
+                console.log('💻 Starting terminal in:', projectPath);
+
+                // Use system default shell
+                const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+                const shellArgs = os.platform() === 'win32'
+                    ? ['-NoExit', '-Command', `Set-Location -Path "${projectPath}"`]
+                    : []; // Unix: empty args, set cwd directly
+
+                terminalProcess = pty.spawn(shell, shellArgs, {
+                    name: 'xterm-256color',
+                    cols: termCols,
+                    rows: termRows,
+                    cwd: projectPath,
+                    env: {
+                        ...process.env,
+                        TERM: 'xterm-256color',
+                        COLORTERM: 'truecolor',
+                        FORCE_COLOR: '3'
+                    }
+                });
+
+                console.log('🟢 Terminal process started, PID:', terminalProcess.pid);
+
+                // Forward terminal output to WebSocket
+                terminalProcess.onData((data) => {
+                    if (ws.readyState === 1) { // WebSocket.OPEN
+                        ws.send(data);
+                    }
+                });
+
+                terminalProcess.onExit(({ exitCode }) => {
+                    console.log('🔴 Terminal process exited with code:', exitCode);
+                    if (ws.readyState === 1) {
+                        ws.close();
+                    }
+                });
+
+            } else if (data.type === 'input') {
+                if (terminalProcess) {
+                    terminalProcess.write(data.data);
+                }
+            } else if (data.type === 'resize') {
+                if (terminalProcess && data.cols && data.rows) {
+                    terminalProcess.resize(data.cols, data.rows);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error handling terminal message:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('💻 Terminal client disconnected');
+        if (terminalProcess) {
+            terminalProcess.kill();
+            terminalProcess = null;
+        }
+    });
+
+    ws.on('error', (error) => {
+        console.error('❌ Terminal WebSocket error:', error);
+        if (terminalProcess) {
+            terminalProcess.kill();
+            terminalProcess = null;
+        }
+    });
+}
+
 // Handle shell WebSocket connections
 function handleShellConnection(ws) {
     console.log('🐚 Shell client connected');
@@ -1616,6 +1721,15 @@ function handleShellConnection(ws) {
                 const provider = data.provider || 'claude';
                 const initialCommand = data.initialCommand;
                 const isPlainShell = data.isPlainShell || (!!initialCommand && !hasSession) || provider === 'plain-shell';
+
+                console.log('🔍 Shell init debug:', {
+                    provider,
+                    'data.isPlainShell': data.isPlainShell,
+                    initialCommand,
+                    hasSession,
+                    'computed isPlainShell': isPlainShell
+                });
+
                 urlDetectionBuffer = '';
                 announcedAuthUrls.clear();
 
@@ -1696,12 +1810,28 @@ function handleShellConnection(ws) {
                 try {
                     // Prepare the shell command adapted to the platform and provider
                     let shellCommand;
+                    let shell;
+                    let shellArgs;
+
                     if (isPlainShell) {
-                        // Plain shell mode - just run the initial command in the project directory
-                        if (os.platform() === 'win32') {
-                            shellCommand = `Set-Location -Path "${projectPath}"; ${initialCommand}`;
+                        // Plain shell mode - use system default shell (same as AI Shell)
+                        shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+
+                        if (initialCommand) {
+                            // Run specific command
+                            if (os.platform() === 'win32') {
+                                shellArgs = ['-Command', `Set-Location -Path "${projectPath}"; ${initialCommand}`];
+                            } else {
+                                shellArgs = ['-c', `cd "${projectPath}" && ${initialCommand}`];
+                            }
                         } else {
-                            shellCommand = `cd "${projectPath}" && ${initialCommand}`;
+                            // Start interactive shell in project directory
+                            if (os.platform() === 'win32') {
+                                shellArgs = ['-NoExit', '-Command', `Set-Location -Path "${projectPath}"`];
+                            } else {
+                                // Unix: use empty args and set cwd directly
+                                shellArgs = [];
+                            }
                         }
                     } else if (provider === 'cursor') {
                         // Use cursor-agent command
@@ -1770,6 +1900,7 @@ function handleShellConnection(ws) {
                     } else {
                         // Use claude command (default) or initialCommand if provided
                         const command = initialCommand || 'claude';
+                        shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
                         if (os.platform() === 'win32') {
                             if (hasSession && sessionId) {
                                 // Try to resume session, but with fallback to new session if it fails
@@ -1777,20 +1908,18 @@ function handleShellConnection(ws) {
                             } else {
                                 shellCommand = `Set-Location -Path "${projectPath}"; ${command}`;
                             }
+                            shellArgs = ['-Command', shellCommand];
                         } else {
                             if (hasSession && sessionId) {
                                 shellCommand = `cd "${projectPath}" && claude --resume ${sessionId} || claude`;
                             } else {
                                 shellCommand = `cd "${projectPath}" && ${command}`;
                             }
+                            shellArgs = ['-c', shellCommand];
                         }
                     }
 
-                    console.log('🔧 Executing shell command:', shellCommand);
-
-                    // Use appropriate shell based on platform
-                    const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
-                    const shellArgs = os.platform() === 'win32' ? ['-Command', shellCommand] : ['-c', shellCommand];
+                    console.log('🔧 Executing shell:', shell, 'with args:', shellArgs);
 
                     // Use terminal dimensions from client if provided, otherwise use defaults
                     const termCols = data.cols || 80;
@@ -1801,7 +1930,7 @@ function handleShellConnection(ws) {
                         name: 'xterm-256color',
                         cols: termCols,
                         rows: termRows,
-                        cwd: os.homedir(),
+                        cwd: isPlainShell && !initialCommand ? projectPath : os.homedir(),
                         env: {
                             ...process.env,
                             TERM: 'xterm-256color',

@@ -25,6 +25,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
     setProjectSortOrder,
     codeEditorSettings,
     updateCodeEditorSetting,
+    terminalSettings,
+    updateTerminalSetting,
     claudePermissions,
     setClaudePermissions,
     cursorPermissions,
@@ -115,6 +117,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
                 onCodeEditorShowMinimapChange={(value) => updateCodeEditorSetting('showMinimap', value)}
                 onCodeEditorLineNumbersChange={(value) => updateCodeEditorSetting('lineNumbers', value)}
                 onCodeEditorFontSizeChange={(value) => updateCodeEditorSetting('fontSize', value)}
+                terminalSettings={terminalSettings}
+                onTerminalEnabledChange={updateTerminalSetting}
               />
             )}
 

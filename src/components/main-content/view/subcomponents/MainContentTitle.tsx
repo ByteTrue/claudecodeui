@@ -18,6 +18,14 @@ function getTabTitle(activeTab: AppTab, shouldShowTasksTab: boolean, t: (key: st
     return t('tabs.git');
   }
 
+  if (activeTab === 'shell') {
+    return t('tabs.shell');
+  }
+
+  if (activeTab === 'terminal') {
+    return t('tabs.terminal');
+  }
+
   if (activeTab === 'tasks' && shouldShowTasksTab) {
     return 'TaskMaster';
   }

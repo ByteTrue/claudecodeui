@@ -117,6 +117,21 @@
       "alphabetical": "Alphabetical",
       "recentActivity": "Recent Activity"
     },
+    "terminal": {
+      "title": "Terminal",
+      "enable": {
+        "label": "Enable Terminal Feature",
+        "description": "Allow using system terminal in the application (requires risk confirmation)"
+      },
+      "warning": {
+        "title": "Security Warning",
+        "message1": "Enabling the terminal feature will allow executing system commands in the application.",
+        "message2": "This may pose security risks. Please ensure you understand the commands being executed.",
+        "message3": "Only use this feature in trusted environments.",
+        "confirm": "I understand the risks, enable terminal",
+        "cancel": "Cancel"
+      }
+    },
     "codeEditor": {
       "title": "Code Editor",
       "theme": {
@@ -318,6 +333,10 @@
       "reAuthDescription": "Sign in with a different account or refresh credentials",
       "button": "Login",
       "reLoginButton": "Re-login"
+    },
+    "plainShell": {
+      "label": "Enable Plain Shell Mode",
+      "description": "When enabled, Shell will run in plain terminal mode without connecting to AI sessions"
     },
     "error": "Error: {{error}}"
   },

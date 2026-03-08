@@ -19,10 +19,17 @@
   },
   "tabs": {
     "chat": "Chat",
-    "shell": "Shell",
+    "shell": "AI Shell",
     "files": "Files",
     "git": "Source Control",
     "tasks": "Tasks"
+  },
+  "terminal": {
+    "title": "Terminal",
+    "open": "Open Terminal",
+    "close": "Close Terminal",
+    "increaseHeight": "Increase Height",
+    "decreaseHeight": "Decrease Height"
   },
   "status": {
     "loading": "Loading...",

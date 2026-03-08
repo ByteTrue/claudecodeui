@@ -13,6 +13,8 @@ export default function AgentCategoryContentSection({
   onCursorPermissionsChange,
   codexPermissionMode,
   onCodexPermissionModeChange,
+  geminiPermissionMode: _geminiPermissionMode,
+  onGeminiPermissionModeChange: _onGeminiPermissionModeChange,
   mcpServers,
   cursorMcpServers,
   codexMcpServers,

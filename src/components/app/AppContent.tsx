@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../sidebar/view/Sidebar';
 import MainContent from '../main-content/view/MainContent';
+import TerminalPanel from '../terminal/view/TerminalPanel';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
 import { useSessionProtection } from '../../hooks/useSessionProtection';
@@ -156,6 +157,8 @@ export default function AppContent() {
         />
       )}
 
+      {/* Global Terminal Panel */}
+      <TerminalPanel />
     </div>
   );
 }
