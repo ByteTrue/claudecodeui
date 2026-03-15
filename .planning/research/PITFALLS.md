@@ -1,185 +1,204 @@
-# Research: Pitfalls for Integrated Terminal
+# Research: Pitfalls for Integrated Project Terminal
 
-**Date:** 2026-03-16
-**Context:** Adding a VS Code-like integrated terminal to an existing browser-based coding workspace
+**Date:** 2026-03-16  
+**Scope:** Identify the highest-risk mistakes when evolving the current shell feature into a VS Code-like integrated project terminal.
 
-## 1. PTY Session Collisions Across Tabs
+## Pitfall 1: Treating Existing Shell Infrastructure As The Finished Product
 
-**Pitfall**
-- Multiple terminal tabs in the same project accidentally reconnect to the same PTY
+### Why It Happens
 
-**Why this is likely here**
-- Current plain-shell keying in `server/index.js` falls back to a project/default session model
+The repo already has xterm, node-pty, and a shell tab, so it is easy to assume the feature is mostly done.
 
-**Warning signs**
-- Creating a second terminal tab shows the same output as the first
-- Closing one tab unexpectedly affects another tab
-- Commands appear in the wrong tab after switching
+### Warning Signs
 
-**Prevention**
-- Add explicit client-generated terminal tab/session IDs to the `/shell` init payload
-- Key PTY sessions by that explicit identity rather than an implicit default
+- roadmap focuses on tiny cosmetic tweaks only
+- no work is planned around bottom-panel integration or tab state
+- mobile is treated as “we will see later”
 
-**Phase**
-- Phase 1
+### Prevention
 
-## 2. Hidden xterm Instances Fail to Resize Correctly
+- define the milestone as a product integration problem, not a PTY plumbing problem
+- explicitly plan layout, tabs, project cwd behavior, and mobile usage
 
-**Pitfall**
-- Terminals mounted in hidden panels or inactive tabs get zero-width measurements and render badly
+### Phase To Address
 
-**Why this is likely here**
-- xterm requires `fit()` and resize coordination when the container becomes visible
-- the repo currently fits on initialization and resize, but integrated panels introduce more visibility transitions
+Early integration phase
 
-**Warning signs**
-- Terminal opens with wrapped or clipped text
-- Cursor renders off-grid after panel open
-- Switching tabs produces incorrect dimensions until a manual resize
+## Pitfall 2: Rebuilding The Terminal Stack Instead Of Reusing It
 
-**Prevention**
-- Only fit after the container is visible and stable
-- Trigger fit+resize on panel open, tab activation, orientation change, and mobile keyboard layout changes
+### Why It Happens
 
-**Phase**
-- Phase 1
+Teams often reach for new libraries when the real issue is orchestration and UX.
 
-## 3. Treating Mobile as a Shrunken Desktop Panel
+### Warning Signs
 
-**Pitfall**
-- Reusing the desktop bottom panel literally on phones
+- proposals introduce a second terminal renderer
+- proposals introduce a second backend channel separate from `/shell`
+- major refactors happen before validating the bottom-panel flow
 
-**Why this is likely here**
-- The user explicitly requires mobile usability, but the current shell UX is primarily desktop-oriented
+### Prevention
 
-**Warning signs**
-- Soft keyboard covers input
-- Tab strip becomes untappable
-- Output area becomes too short to be useful
+- keep `@xterm/xterm`, `node-pty`, and `/shell`
+- limit v1 work to integration, state, lifecycle, and mobile fit
 
-**Prevention**
-- Use a mobile sheet/fullscreen terminal presentation
-- Keep the session model shared with desktop, but adapt the container and controls for touch
+### Phase To Address
 
-**Phase**
-- Phase 1
+Architecture / implementation planning
 
-## 4. Losing Running Commands on UI Navigation
+## Pitfall 3: Weak PTY Security Assumptions
 
-**Pitfall**
-- Switching tabs, changing project context, or collapsing the terminal interrupts a running command
+### Why It Happens
 
-**Why this is likely here**
-- `useShellRuntime` currently disconnects/disposes under several state transitions
-- the current shell UX is not designed around persistent multi-tab workspace terminals
+An integrated terminal feels like a UI feature, but it is also remote command execution from a web surface.
 
-**Warning signs**
-- Running command stops when the user navigates elsewhere in the UI
-- Terminal reconnect banner appears too often during normal navigation
-- Output history is unexpectedly missing
+### Warning Signs
 
-**Prevention**
-- Separate UI visibility from PTY session identity
-- Preserve server-side PTY sessions independently from React mount lifecycle
-- Decide explicitly which events should close a terminal vs merely hide it
+- shell access is treated as harmless because it is “local”
+- auth/authorization checks on WebSocket shell access are not reviewed during changes
+- project path and session identifiers are passed through without strict validation
 
-**Phase**
-- Phase 1
+### Prevention
 
-## 5. Overbuilding v1 With Split Panes and Power-User Controls
+- review `/shell` authentication and path/session validation while changing the feature
+- keep permissions least-privileged
+- avoid widening shell access semantics implicitly through convenience features
 
-**Pitfall**
-- Spending the milestone on advanced terminal management before fixing the core workflow
+### Phase To Address
 
-**Why this is likely here**
-- VS Code parity can invite feature copying beyond the actual user need
+Session / backend phase
 
-**Warning signs**
-- Split views, shell profiles, and advanced command history appear before the panel and multi-tab flow feel solid
-- Mobile usability slips because desktop-only enhancements consume the schedule
+### Source-Backed Note
 
-**Prevention**
-- Keep v1 scoped to integrated panel/sheet, project cwd, multi-tab sessions, and stable input/output
-- Defer split panes and profile management
+`node-pty` warns that spawned processes run with the same permission level as the parent process. xterm.js security guidance also warns that browser-based terminal integrations raise security requirements substantially.
 
-**Phase**
-- Phase 1
+## Pitfall 4: Ignoring Flow Control And Large Output Behavior
 
-## 6. Security Assumptions Around Browser-Terminal Embedding
+### Why It Happens
 
-**Pitfall**
-- Treating browser-embedded terminal access as low risk because it is “just UI”
+Simple commands work fine, so teams miss the heavy-output cases until later.
 
-**Why this matters**
-- `node-pty` launches child processes with the same permission level as the parent process
-- xterm's security guidance warns that any JavaScript on the page can potentially observe terminal keystrokes and shell output
+### Warning Signs
 
-**Warning signs**
-- Overly broad shell access exposed in contexts that should be limited
-- Sensitive command output rendered into untrusted UI/plugin surfaces
-- Terminal feature exposed without revisiting auth and permission boundaries
+- terminal becomes sluggish on build/test output
+- browser input lags during long-running commands
+- memory or buffer growth appears under noisy processes
 
-**Prevention**
-- Review which authenticated users can open terminals
-- Keep shell access inside trusted app surfaces
-- Re-check path validation and any plugin embedding around terminal views
+### Prevention
 
-**Phase**
-- Phase 1 and verification
+- test with large-output commands early
+- if needed, add ACK-based flow control over the existing WebSocket channel
+- review whether `node-pty` flow-control support should be enabled or used selectively
 
-## 7. Depending Only on Keyboard Shortcuts
+### Phase To Address
 
-**Pitfall**
-- Implementing a terminal UX that works only if the user knows desktop shortcuts
+Implementation hardening
 
-**Why this is likely here**
-- VS Code-inspired terminal features often assume keyboard-heavy use
+### Source-Backed Note
 
-**Warning signs**
-- Creating or switching tabs is awkward without a hardware keyboard
-- Important actions are hidden behind hover states or context menus only
+xterm.js documents that WebSocket-backed terminals can require extra flow-control handling. node-pty also documents optional flow-control support.
 
-**Prevention**
-- Provide explicit buttons for new tab, close tab, switch tab, and expand/collapse
-- Treat keyboard shortcuts as enhancement, not access path
+## Pitfall 5: Losing Session Identity During UI Navigation
 
-**Phase**
-- Phase 1
+### Why It Happens
 
-## 8. Mixing Existing Shell Modes Without Clarifying Their Roles
+The existing shell was designed around a dedicated view. A bottom panel with tabs changes lifecycle assumptions.
 
-**Pitfall**
-- Confusing integrated terminal tabs with the current standalone/minimal shell flows
+### Warning Signs
 
-**Why this is likely here**
-- The repo already has:
-  - `Shell`
-  - `StandaloneShell`
-  - “plain shell” vs provider-backed shell behavior
+- switching app tabs disconnects terminals unexpectedly
+- switching terminal tabs restarts shell processes
+- output disappears when panel visibility changes
 
-**Warning signs**
-- New UI reuses props in ways that blur project terminal tabs and one-off command execution
-- Fixes for integrated tabs break minimal shell flows
+### Prevention
 
-**Prevention**
-- Keep one low-level shell surface
-- Add a dedicated integrated-terminal orchestration layer above it
-- Preserve standalone/minimal shells as separate call sites
+- separate “visible/active” state from “session alive” state
+- design explicit tab lifecycle rules
+- test hide/show, project switch, and reconnect paths
 
-**Phase**
-- Phase 1 and Phase 2
+### Phase To Address
 
-## Source Notes
+Product integration phase
 
-The security risk statement is grounded in:
+## Pitfall 6: Desktop-First Layout Decisions That Break On Mobile
 
-- node-pty README security section: https://github.com/microsoft/node-pty
+### Why It Happens
+
+Terminal UIs are often designed on wide screens and then squeezed onto phones later.
+
+### Warning Signs
+
+- tiny tap targets in the terminal tab strip
+- keyboard overlap hides the prompt
+- too much header chrome leaves little output space
+- desktop-only assumptions about hover, shortcuts, or simultaneous views
+
+### Prevention
+
+- define mobile as first-version scope
+- use a mobile-specific panel behavior while keeping the same terminal engine
+- prioritize focus, readable output, and simple tab actions over dense controls
+
+### Phase To Address
+
+UI integration and polishing
+
+## Pitfall 7: Overcommitting To Rich Shell Integration In v1
+
+### Why It Happens
+
+VS Code shell integration features are attractive, so teams try to reproduce everything at once.
+
+### Warning Signs
+
+- command decorations and cwd intelligence dominate the milestone
+- tabbed sessions and panel integration remain unfinished while shell metadata work grows
+- shell-script injection work blocks baseline terminal usability
+
+### Prevention
+
+- treat shell integration as a follow-on enhancement
+- prioritize baseline usability: panel, tabs, project cwd, mobile, stability
+- only add richer shell metadata if it directly unlocks a concrete v1 requirement
+
+### Phase To Address
+
+Scope control throughout planning
+
+## Pitfall 8: Unsafe Link / Output Handling
+
+### Why It Happens
+
+Terminal output can look like URLs, paths, or escape-sequence-driven links, and naive handling can create security or UX issues.
+
+### Warning Signs
+
+- output-derived links open without clear user action
+- terminal text is reused in the DOM unsafely
+- custom parsing of terminal output grows without guardrails
+
+### Prevention
+
+- keep link handling explicit and modifier/click gated where appropriate
+- treat terminal output as untrusted data
+- avoid DOM injection patterns based on terminal content
+
+### Phase To Address
+
+Implementation hardening
+
+## Recommended Risk Order
+
+Address earliest:
+
+1. product integration scope
+2. tab/session lifecycle
+3. mobile usability
+4. security review
+5. output/flow-control hardening
+
+## Sources
+
 - xterm.js security guide: https://xtermjs.org/docs/guides/security/
-
-The layout and terminal-expectation guidance is grounded in:
-
-- VS Code terminal docs: https://code.visualstudio.com/docs/terminal/getting-started
-- VS Code panel UX guidelines: https://code.visualstudio.com/api/ux-guidelines/panel
-
----
-*Pitfall recommendation status: the highest-risk failures are session identity collisions, bad resize/visibility handling, and underdesigned mobile UX*
+- xterm.js link handling guide: https://xtermjs.org/docs/guides/link-handling/
+- xterm.js flow control guide: https://xtermjs.org/docs/guides/flowcontrol/
+- node-pty README: https://github.com/microsoft/node-pty

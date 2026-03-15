@@ -1,76 +1,66 @@
-# Research Summary: Integrated Terminal
+# Research Summary: Integrated Project Terminal
 
 **Date:** 2026-03-16
-**Scope:** VS Code-like integrated project terminal for Claude Code UI
 
-## Key Findings
+## Recommendation
 
-### Stack
+Do not replace the existing terminal stack. The repo already has the right foundation: `@xterm/xterm`, `node-pty`, WebSocket transport on `/shell`, and reusable shell UI modules. The milestone should focus on turning that foundation into a VS Code-like workspace terminal experience.
 
-The repo already has the right core stack for this feature:
+## Stack
 
-- `@xterm/xterm` plus first-party addons for rendering and fitting
-- `node-pty` for shell processes
-- an existing `/shell` WebSocket transport
+Reuse:
 
-The recommendation is to **reuse the current shell stack** and invest in workspace integration, tab/session orchestration, and mobile presentation.
+- `@xterm/xterm` and current addons
+- `node-pty`
+- existing `/shell` WebSocket transport
+- existing shell React components and hooks
 
-### Table Stakes
+Avoid:
 
-The minimum bar for v1 is:
+- terminal engine swaps
+- second terminal backends
+- split-pane infrastructure in v1
 
-- integrated bottom-panel terminal on desktop
-- terminal starts in the current project/workspace directory
-- multiple terminal tabs with fast switching
-- stable input/output/reconnect behavior
-- mobile support for opening the terminal, running commands, reading output, and switching tabs
+## Table Stakes
 
-### Architecture
+The research points to these as the real v1 requirements:
 
-The missing architecture is not a new backend; it is a new orchestration layer:
+- bottom-panel terminal integrated into the workspace
+- default cwd at the current project/workspace root
+- multiple terminal tabs with simple switching and close/restart actions
+- stable output, resize, copy/paste, and reconnect behavior
+- mobile core usability
 
-- terminal panel/sheet host in the workspace UI
-- client-side terminal tab/session state
-- explicit terminal tab/session identity in the `/shell` init protocol
-- reuse of the existing `Shell` runtime as the per-tab terminal surface
+## Watch Out For
 
-### Watch Out For
+- PTY/WebSocket security: browser terminals are powerful surfaces, not harmless widgets
+- large-output flow control: noisy commands can degrade terminal responsiveness
+- session lifecycle: a bottom panel changes visibility/focus behavior compared with a dedicated shell page
+- mobile layout: soft keyboard and limited vertical space will break desktop-first assumptions
 
-The main risks are:
+## Architectural Direction
 
-- PTY collisions between multiple tabs in the same project
-- hidden xterm instances sizing incorrectly when shown
-- mobile keyboards and small-screen layouts breaking usability
-- losing running commands during normal UI navigation
-- overbuilding split panes and advanced power-user features before the core flow is solid
+Add a workspace-level terminal panel host and a tab/session manager above the current shell feature. Reuse the existing shell instance implementation per tab and refine backend session semantics only where needed for stable tab identity and reconnect behavior.
 
-## Recommended Scope Shape
+## Recommended Scope Boundary
 
-### Build First
+Include now:
 
-- terminal session identity model
-- integrated desktop panel
-- tabbed multi-session lifecycle
-- stable resize/reconnect behavior
-- mobile sheet/fullscreen adaptation
+- integrated panel
+- project-root default context
+- tabs
+- mobile core usability
 
-### Defer
+Defer:
 
-- split terminal panes
-- advanced profile management
-- deep chat/agent automation into terminal
-- durable cross-reload session persistence
+- split panes
+- deep shell integration
+- reload persistence
+- deep editor/chat/file-tree launch actions
 
-## Practical Conclusion
+## Source Highlights
 
-This feature is a brownfield product-integration milestone. The codebase already knows how to render a terminal and run a PTY. The work that matters is making that capability feel native to the workspace, safe to use repeatedly, and usable on mobile.
-
-## Research Files
-
-- `STACK.md`
-- `FEATURES.md`
-- `ARCHITECTURE.md`
-- `PITFALLS.md`
-
----
-*Summary status: ready to define v1 requirements*
+- VS Code positions the integrated terminal as a workspace-root, in-editor command surface.
+- VS Code shell integration shows that cwd and command awareness are valuable, but not required to establish basic terminal usability.
+- xterm.js recommends addon-based extension and documents WebSocket flow-control concerns.
+- node-pty documents resize/cwd/flow-control support and warns that PTY processes inherit server permissions.

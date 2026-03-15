@@ -1,121 +1,164 @@
-# Research: Stack for Integrated Terminal
+# Research: Stack for Integrated Project Terminal
 
-**Date:** 2026-03-16
-**Context:** Brownfield enhancement for `Claude Code UI`
-**Scope:** Add a VS Code-like integrated project terminal to the existing React + Express + WebSocket + PTY application
+**Date:** 2026-03-16  
+**Scope:** Add a VS Code-like integrated project terminal to the existing workspace app without replacing the current shell stack.
 
-## Recommendation Summary
+## Recommendation
 
-The current stack is already the correct foundation for v1. Do **not** replace the terminal renderer, transport, or PTY backend. Reuse:
+Reuse the existing terminal stack already present in this repository:
 
-- `@xterm/xterm` for terminal rendering
-- first-party xterm addons already in the repo (`@xterm/addon-fit`, `@xterm/addon-web-links`, `@xterm/addon-webgl`)
-- `node-pty` for PTY-backed shell processes
-- the existing `/shell` WebSocket transport in `server/index.js`
+- Frontend terminal surface: `@xterm/xterm`
+- Frontend sizing and usability addons: `@xterm/addon-fit`, `@xterm/addon-web-links`, `@xterm/addon-clipboard`, `@xterm/addon-webgl`
+- Backend PTY process management: `node-pty`
+- Transport: existing `/shell` WebSocket channel in `server/index.js`
+- UI composition: existing React shell modules in `src/components/shell/` and `src/components/standalone-shell/`
 
-The main work is product integration and session modeling, not stack replacement.
+This project does not need a terminal engine swap. The product gap is integration, session management, layout, and mobile usability.
 
-## Reuse vs Add
+## What The Codebase Already Has
 
-### Reuse As-Is
+The current app already contains the hard parts of terminal infrastructure:
 
-| Capability | Current Repo State | Recommendation | Confidence |
-|---|---|---|---|
-| Terminal rendering | `@xterm/xterm` already used in `src/components/shell/hooks/useShellTerminal.ts` | Keep xterm.js as the terminal surface | High |
-| Layout fitting | `FitAddon` already used and fitted on init/resize | Keep and standardize fit calls around panel resize/show/hide | High |
-| PTY process execution | `node-pty` already used in `server/index.js` | Keep node-pty for local shell sessions | High |
-| Terminal transport | Existing `/shell` WebSocket init/input/resize/output flow | Keep current WebSocket transport; extend message model instead of replacing it | High |
-| Clickable links | `WebLinksAddon` already used in non-minimal shell mode | Keep and extend link/file handling as terminal becomes more central | High |
-| GPU acceleration | `WebglAddon` already used with graceful fallback | Keep optional; do not make WebGL a hard requirement | High |
+- `server/index.js` creates PTY sessions with `node-pty`
+- `server/index.js` exposes `/shell` over WebSocket
+- `src/components/shell/view/Shell.tsx` renders an xterm-based shell surface
+- `src/components/shell/hooks/useShellConnection.ts` initializes terminal sessions with `projectPath`, terminal size, and optional `sessionId`
+- `src/components/main-content/view/MainContent.tsx` already exposes shell as a full-page tab
+- `src/components/standalone-shell/view/StandaloneShell.tsx` wraps shell for reuse in other contexts
 
-### Add or Extend
+This means v1 should extend the current shell feature into a workspace-integrated terminal panel, not start over with a new backend or renderer.
 
-| Need | Recommendation | Why | Confidence |
-|---|---|---|---|
-| Multi-terminal tabs | Add a client-side terminal tab/session model and a matching server-side terminal session identifier | Current plain-shell flow does not distinguish multiple concurrent tabs in the same project | High |
-| Panel integration | Add a bottom-panel host above current feature-specific shell views | User goal is integrated workspace terminal, not a dedicated shell page | High |
-| Mobile presentation | Use a mobile-specific fullscreen/bottom-sheet presentation over the workspace rather than a shallow bottom strip | Soft keyboard and vertical space constraints make desktop panel semantics weak on phones | Medium |
-| Session metadata | Track tab name, cwd label, created-at, active state, and reconnect key in UI state | Needed for VS Code-like tab switching and reconnect behavior | High |
-| Safer shell init protocol | Extend `/shell` init payload with an explicit terminal tab/session key and optionally a display title | Prevent PTY collisions and enable stable reconnect behavior | High |
+## Recommended v1 Stack Shape
 
-## Recommended v1 Stack
+### 1. Terminal Renderer
 
-### Frontend
+Keep `@xterm/xterm` as the single terminal renderer.
 
-- Keep React 18 feature modules in `src/components/`
-- Reuse `Shell`, `useShellRuntime`, `useShellConnection`, and `useShellTerminal`
-- Add a workspace terminal host component near `src/components/main-content/view/MainContent.tsx`
-- Add a local terminal tab state hook/store for:
-  - create tab
-  - activate tab
-  - close tab
-  - rename tab
-  - persist panel open/closed state
+Why:
 
-### Backend
+- The project already depends on it in `package.json`
+- It is the standard browser terminal surface paired with `node-pty`
+- The current shell UI is already built on top of it
 
-- Keep Express + `ws` + `node-pty`
-- Extend the `/shell` init contract in `server/index.js`
-- Keep PTY lifetime management in `ptySessionsMap`, but change the keying strategy so multiple plain terminals per project are distinct
-- Keep project-path validation and safe session validation
+Confidence: High
 
-### Interaction Model
+### 2. Addon Strategy
 
-- Desktop:
-  - bottom panel
-  - resizable height
-  - tab strip with active terminal
-  - create/close/switch actions in the panel header
-- Mobile:
-  - open terminal as a dedicated bottom sheet or fullscreen sheet
-  - preserve the same tab model, but simplify controls
-  - prioritize large touch targets, visible active tab, and stable output rendering while the mobile keyboard is open
+Use the existing addons intentionally instead of adding new surface area in v1:
 
-## What Not To Use
+- `@xterm/addon-fit`: keep for resize and panel open/close fitting
+- `@xterm/addon-web-links`: keep for URL/file-like output interactions
+- `@xterm/addon-clipboard`: keep for copy/paste ergonomics
+- `@xterm/addon-webgl`: keep as an optional performance path, but allow fallback if rendering issues appear on some environments
 
-### Do Not Replace xterm.js
+Do not add search, image, or custom parser addons in v1 unless a requirement depends on them.
 
-The repo already ships xterm.js and first-party addons. Replacing it would add migration risk without solving the product problem.
+Confidence: High
 
-### Do Not Replace WebSocket with a Higher-Level Realtime Stack
+### 3. PTY Backend
 
-The current terminal flow is already a straightforward stream of init/input/resize/output events. Socket.io or a custom RPC layer would add protocol overhead and migration work for little v1 benefit.
+Keep `node-pty` as the PTY backend.
 
-### Do Not Introduce SSH or Remote Shell Infrastructure in v1
+Why:
 
-The user request is about natural in-app project terminal execution for the current local workspace model. Remote execution, container orchestration, or SSH multiplexing is a separate product track.
+- It is already used in `server/index.js`
+- It supports resize, cwd, shell process launch, and flow control hooks
+- It is the normal pairing for xterm.js-backed web terminals
 
-### Do Not Build a Desktop-Only Bottom Panel
+Important backend considerations:
 
-Mobile support is a stated v1 requirement. The stack can stay the same, but the presentation contract must account for small screens and the on-screen keyboard from the start.
+- preserve per-tab PTY identity explicitly instead of relying on one shell view per page
+- keep cwd tied to the selected project/workspace by default
+- continue using resize events from the browser terminal
+- treat reconnect and timeout behavior as part of product design, not just transport cleanup
+
+Confidence: High
+
+### 4. Transport
+
+Reuse the existing `/shell` WebSocket transport instead of adding REST polling or a new socket channel for v1.
+
+Why:
+
+- current shell already uses live duplex WebSocket I/O
+- terminal output is streaming-oriented
+- resize, reconnect, auth handoff, and input are already modeled there
+
+Recommended transport refinement:
+
+- add explicit terminal-tab identifiers on top of the existing session model
+- keep shell metadata lightweight: tab id, title, cwd, connection state, exit state
+- if large-output lag appears, add an ACK-based flow-control layer rather than redesigning transport
+
+Confidence: High
+
+### 5. Session Model
+
+Introduce a product-level terminal tab/session manager on top of the existing shell connection model.
+
+Recommended tab metadata:
+
+- `terminalTabId`
+- `projectId` or `projectPath`
+- `sessionId` if attached to an existing provider session
+- `title`
+- `mode` (`plain-shell` vs provider session resume)
+- `cwd`
+- `status` (`connecting`, `running`, `disconnected`, `exited`)
+- `lastActiveAt`
+
+This should live in UI state and map to backend PTY sessions, rather than treating each terminal surface as an isolated mount.
+
+Confidence: Medium-High
 
 ## Mobile Implications
 
-- xterm.js can stay as the renderer, but layout/focus behavior must be managed explicitly when the panel opens, closes, or resizes
-- hidden or zero-height containers must be refit after becoming visible
-- keyboard-heavy shortcuts cannot be the only access path; tap-first controls are required
-- the mobile version should reuse the same backend session model, not invent a second terminal backend
+Do not introduce a separate mobile terminal engine. Keep xterm.js, but change the product shell around it:
 
-## Brownfield Fit
+- open terminal in a bottom sheet / bottom panel behavior that can grow taller on focus
+- use larger hit targets for tab switching and session actions
+- fit the terminal after viewport changes and software keyboard appearance
+- minimize always-visible controls while typing
+- avoid promising full desktop shortcut parity on mobile
 
-This repo already has most low-level terminal pieces:
+The requirement is core usability, not desktop parity.
 
-- renderer and addons in `src/components/shell/hooks/useShellTerminal.ts`
-- connection/runtime hooks in `src/components/shell/hooks/useShellConnection.ts` and `src/components/shell/hooks/useShellRuntime.ts`
-- PTY session handling in `server/index.js`
-- mobile navigation entry for shell in `src/components/app/MobileNav.tsx`
+Confidence: Medium
 
-The stack decision is therefore conservative: keep the terminal technology, change the workspace integration model.
+## What Not To Use In v1
+
+- Do not replace `@xterm/xterm` with another browser terminal renderer
+- Do not replace `node-pty` with a remote execution service just to get tabs
+- Do not build a second terminal backend parallel to `/shell`
+- Do not add split-pane terminal layout infrastructure before tabbed sessions work well
+- Do not add broad shell-integration scripting as a prerequisite for v1 usability
+
+## Optional Later Enhancements
+
+- shell integration sequences for cwd / command boundary detection
+- richer tab titles based on current cwd or foreground process
+- session persistence across reloads
+- file-tree “Open in Terminal Here”
+- editor/chat initiated “Run in Terminal”
 
 ## Sources
 
-- VS Code terminal getting started: https://code.visualstudio.com/docs/terminal/getting-started
+- VS Code terminal basics: https://code.visualstudio.com/docs/terminal/getting-started
 - VS Code shell integration: https://code.visualstudio.com/docs/terminal/shell-integration
-- VS Code panel UX guidelines: https://code.visualstudio.com/api/ux-guidelines/panel
 - xterm.js addons guide: https://xtermjs.org/docs/guides/using-addons/
-- xterm.js Terminal API: https://xtermjs.org/docs/api/terminal/classes/terminal/
-- xterm.js security guide: https://xtermjs.org/docs/guides/security/
+- xterm.js flow control guide: https://xtermjs.org/docs/guides/flowcontrol/
 - node-pty README: https://github.com/microsoft/node-pty
 
----
-*Recommendation status: reuse existing terminal stack, extend session and layout layers*
+## Source-Backed Notes
+
+- VS Code opens the integrated terminal in the workspace root by default and positions it as part of the editor workflow, which matches the requested mental model.
+- xterm.js recommends addon-based extension rather than forking terminal behavior into custom renderers.
+- xterm.js documents that WebSocket-backed terminals may need extra flow-control handling when producers are fast.
+- node-pty documents resize, cwd, and optional flow-control support, and warns that PTY processes run with the server process' permission level.
+
+## Confidence Summary
+
+- Reuse current xterm.js + node-pty + WebSocket stack: High
+- Build tabs/state on top of current shell feature instead of replacing it: High
+- Mobile should use the same terminal engine with a different surrounding UX: Medium
+- Rich shell integration should be deferred behind baseline usability: Medium-High
