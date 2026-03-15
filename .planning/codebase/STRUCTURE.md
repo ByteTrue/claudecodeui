@@ -6,153 +6,148 @@
 
 ```text
 claudecodeui/
-├── .codex/             # GSD workflows, skills, and command resources
-├── .github/            # Repo metadata and release workflow
-├── .husky/             # Git hook scripts
-├── plugins/            # Example plugin assets checked into the repo
-├── public/             # Static assets, service worker, icons, screenshots
-├── scripts/            # Maintenance/install helper scripts
-├── server/             # Node backend, provider adapters, routes, DB, services
-├── shared/             # Shared runtime constants used by server and client
-├── src/                # React frontend source
-├── package.json        # Scripts and dependency manifest
-├── vite.config.js      # Vite dev/build configuration
-├── tsconfig.json       # TypeScript configuration
-└── README.md           # Product and setup documentation
+├── .codex/                 # GSD workflows, skills, templates, and local agent assets
+├── .github/                # Repository automation (release notification workflow)
+├── .planning/              # Generated planning/codebase documents
+├── plugins/                # Example/local plugin sources (`plugins/starter`)
+├── public/                 # Static assets, screenshots, icons, service worker, API docs
+├── scripts/                # Setup and packaging helper scripts
+├── server/                 # Node/Express backend, provider bridges, DB, routes, services
+├── shared/                 # Shared constants used by client/server (`shared/modelConstants.js`)
+├── src/                    # Frontend SPA source code
+├── package.json            # Project manifest and scripts
+├── tsconfig.json           # TypeScript compiler config
+├── vite.config.js          # Vite dev/build config
+└── README.md               # Primary user documentation
 ```
 
 ## Directory Purposes
 
 **server/**
-- Purpose: backend runtime and orchestration layer
-- Contains: `index.js`, `cli.js`, provider adapters, route modules, middleware, DB access, utility services
-- Key files: `server/index.js`, `server/claude-sdk.js`, `server/openai-codex.js`, `server/projects.js`, `server/database/db.js`
+- Purpose: Backend application runtime
+- Contains: API route modules, provider adapters, database code, middleware, services, and server utilities
+- Key files: `server/index.js`, `server/claude-sdk.js`, `server/openai-codex.js`, `server/projects.js`
 - Subdirectories: `routes/`, `database/`, `middleware/`, `services/`, `utils/`, `constants/`
 
 **src/**
-- Purpose: React SPA source
-- Contains: feature modules, contexts, hooks, shared UI primitives, translations, client utilities
-- Key files: `src/main.jsx`, `src/App.tsx`, `src/hooks/useProjectsState.ts`, `src/contexts/WebSocketContext.tsx`, `src/utils/api.js`
-- Subdirectories: `components/`, `contexts/`, `hooks/`, `shared/`, `i18n/`, `types/`, `utils/`
+- Purpose: Frontend application code
+- Contains: React components, contexts, hooks, utilities, styles, and type definitions
+- Key files: `src/App.tsx`, `src/main.jsx`, `src/index.css`, `src/hooks/useProjectsState.ts`
+- Subdirectories: `components/`, `contexts/`, `hooks/`, `i18n/`, `shared/`, `types/`, `utils/`
 
 **src/components/**
-- Purpose: feature-level UI organization
-- Contains: one folder per major surface such as `chat`, `file-tree`, `git-panel`, `shell`, `settings`, `sidebar`, `task-master`
-- Key files: feature-specific `view/*.tsx`, hooks, constants, utilities, and sometimes `index.ts`
-- Subdirectories: typically `view/`, `hooks/`, `types/`, `utils/`, `constants/`
-
-**shared/**
-- Purpose: values shared across runtimes without importing the whole frontend
-- Contains: model metadata in `shared/modelConstants.js`
-- Key files: `shared/modelConstants.js`
-- Subdirectories: none
+- Purpose: Feature-organized UI modules
+- Contains: Feature folders like `chat`, `file-tree`, `git-panel`, `shell`, `settings`, `auth`, `task-master`
+- Key files: `src/components/app/AppContent.tsx`, `src/components/main-content/view/MainContent.tsx`
+- Subdirectories: Most features use nested `view/`, `hooks/`, `types/`, `utils/`, `constants/`
 
 **public/**
-- Purpose: non-bundled static assets
-- Contains: icons, screenshots, `manifest.json`, `sw.js`, static HTML helpers
-- Key files: `public/sw.js`, `public/manifest.json`, `public/api-docs.html`
+- Purpose: Static assets served directly by Express
+- Contains: `sw.js`, screenshots, icons, logo assets, and `api-docs.html`
+- Key files: `public/sw.js`, `public/logo.svg`
 - Subdirectories: `icons/`, `screenshots/`
 
 **plugins/**
-- Purpose: checked-in plugin examples or starter assets
-- Contains: `plugins/starter/**`
-- Key files: repo currently exposes the directory but no runtime plugin state is stored here
-- Subdirectories: `starter/`
+- Purpose: Plugin development/reference area inside the repo
+- Contains: starter plugin scaffold
+- Key files: `plugins/starter/*`
+- Subdirectories: plugin-specific
 
-**.codex/**
-- Purpose: Codex/GSD workflows, templates, and skills used by agents
-- Contains: `get-shit-done/`, `skills/`, `agents/`
-- Key files: workflow and template markdown under `.codex/get-shit-done/**`
+**shared/**
+- Purpose: Cross-runtime shared module(s)
+- Contains: `shared/modelConstants.js`
+- Key files: `shared/modelConstants.js`
+- Subdirectories: None currently
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/main.jsx` - Browser bootstrap
-- `src/App.tsx` - Provider composition and routing
-- `server/cli.js` - Published CLI binary entry
-- `server/index.js` - Express/WebSocket server startup
+- `server/index.js`: Main server startup, route mounting, WebSocket handling, static hosting
+- `server/cli.js`: Packaged CLI entry
+- `src/main.jsx`: Frontend mount point
+- `src/App.tsx`: Top-level provider tree and routes
 
 **Configuration:**
-- `package.json` - Scripts, dependencies, npm metadata
-- `vite.config.js` - Vite host/proxy/build settings
-- `tsconfig.json` - TS compiler options
-- `eslint.config.js` - Lint rules
-- `server/load-env.js` - `.env` loading
+- `package.json`: dependencies, scripts, published files, CLI bin names
+- `.env.example`: documented runtime env vars
+- `vite.config.js`: dev proxy and chunk splitting
+- `tsconfig.json`: TS compiler behavior
+- `eslint.config.js`: lint rules
+- `tailwind.config.js`: design tokens/content scan config
 
 **Core Logic:**
-- `server/projects.js` - Provider project and session discovery
-- `server/routes/*.js` - REST API modules
-- `server/claude-sdk.js`, `server/openai-codex.js`, `server/cursor-cli.js`, `server/gemini-cli.js` - Provider execution adapters
-- `src/components/**` - User-facing features
-- `src/utils/api.js` - Browser REST client
+- `server/routes/`: REST API modules
+- `server/projects.js`: project/session discovery across providers
+- `server/database/`: SQLite schema and helpers
+- `server/utils/`: plugin loading, MCP detection, helper utilities
+- `src/components/chat/`: main conversation UI and provider UX
+- `src/components/file-tree/`: file browser/editor launch flows
+- `src/components/git-panel/`: Git status/history/branch views
+- `src/components/shell/`: terminal UI and transport hooks
 
-**Testing / Quality Gates:**
-- No committed `tests/`, `__tests__/`, `*.test.*`, Playwright, or Vitest tree was found
-- Current quality commands live in `package.json`: `npm run lint`, `npm run typecheck`, `npm run build`
+**Testing:**
+- No dedicated `tests/` tree found
+- No colocated `*.test.*` or `*.spec.*` files were found in the repository
 
 **Documentation:**
-- `README.md` and localized README variants
-- `.codex/get-shit-done/**` for workflow docs
+- `README.md` and localized README files
+- `public/api-docs.html`: API usage documentation
+- `.codex/get-shit-done/`: workflow/reference/template documentation used by GSD
 
 ## Naming Conventions
 
 **Files:**
-- React components use `PascalCase.tsx`, especially under `src/components/**/view/`
-- Hooks use `useSomething.ts` or `useSomething.tsx`
-- Utility and config modules use lowercase or camel/kebab names such as `api.js`, `plugin-loader.js`, `dateUtils.ts`
-- Barrel exports use `index.ts`
+- `PascalCase.tsx` for most React view components, such as `ChatInterface.tsx` and `ShellHeader.tsx`
+- `useSomething.ts[x]` for hooks, such as `useProjectsState.ts` and `useShellRuntime.ts`
+- `types.ts`, `constants.ts`, `utils.ts` for feature-local supporting modules
+- Lowercase or kebab-style `.js` files for server/runtime modules such as `server/openai-codex.js`
 
 **Directories:**
-- Feature folders use kebab-case, for example `file-tree`, `git-panel`, `project-creation-wizard`
-- Server folders are plural by responsibility: `routes`, `services`, `utils`, `database`
+- Kebab-case feature directories in `src/components/` like `file-tree`, `git-panel`, `provider-auth`
+- Lowercase server groupings like `routes`, `database`, `middleware`, `services`, `utils`
 
 **Special Patterns:**
-- UI features commonly follow `view/`, `hooks/`, `types/`, `utils/`, and `constants/`
-- Shared UI primitives live under `src/shared/view/ui/`
-- Translation namespaces are grouped by locale and feature under `src/i18n/locales/<locale>/`
+- `index.ts` / `index.tsx` barrels appear for some features, such as `src/components/auth/index.ts`
+- `view/subcomponents/` is commonly used for nested presentation breakdowns
 
 ## Where to Add New Code
 
-**New frontend feature:**
-- Primary code: `src/components/<feature>/`
-- Shared state: `src/contexts/` or feature-local context
-- Shared hooks: `src/hooks/`
-- Shared UI primitives: `src/shared/view/ui/`
+**New Frontend Feature:**
+- Primary code: add a feature folder under `src/components/`
+- Shared cross-feature state: `src/contexts/` or `src/hooks/`
+- Server backing APIs: `server/routes/` plus supporting modules under `server/services/` or `server/utils/`
 
-**New backend API or service:**
-- Route definition: `server/routes/<feature>.js`
-- Supporting service or helper: `server/services/` or `server/utils/`
-- Provider-specific integration: one of the `server/*-cli.js` or SDK adapter modules
+**New Component/Module:**
+- Implementation: `src/components/<feature>/view/`
+- Local hook/state: `src/components/<feature>/hooks/`
+- Types/constants/utils: sibling `types/`, `constants/`, and `utils/` folders when the feature already follows that pattern
 
-**New shared constants or types:**
+**New Route/Backend Capability:**
+- Route definition: `server/routes/<domain>.js`
+- Shared backend logic: `server/services/` for domain behavior or `server/utils/` for reusable helpers
+- Middleware/auth concerns: `server/middleware/`
+
+**Utilities:**
+- Frontend shared helpers: `src/utils/` or `src/lib/`
+- Shared type definitions: `src/types/`
 - Cross-runtime constants: `shared/`
-- Frontend-only app types: `src/types/`
-
-**New docs or workflow assets:**
-- Planning artifacts: `.planning/`
-- Agent/GSD workflow resources: `.codex/get-shit-done/`
 
 ## Special Directories
 
-**public/**
-- Purpose: service worker and static assets served directly by Express
-- Source: committed source files
+**.planning/**
+- Purpose: Generated planning and mapping artifacts
+- Source: GSD workflows
+- Committed: Yes in this repository state
+
+**plugins/starter/**
+- Purpose: Reference plugin/example scaffold
+- Source: maintained in repo for plugin development
 - Committed: Yes
 
-**dist/**
-- Purpose: Vite build output served in production from `server/index.js`
-- Source: generated by `npm run build`
-- Committed: No
-
-**.planning/codebase/**
-- Purpose: generated codebase map for GSD planning
-- Source: this mapping pass
-- Committed: typically yes when planning docs are tracked
-
-**User-home runtime storage (not in repo):**
-- `~/.cloudcli/auth.db` - auth/config DB
-- `~/.claude-code-ui/plugins/` - installed plugins
-- `~/.claude/`, `~/.cursor/`, `~/.codex/`, `~/.gemini/` - external provider data that the app reads
+**public/**
+- Purpose: Directly served assets and service worker
+- Source: static source files, not generated at runtime
+- Committed: Yes
 
 ---
 *Structure analysis: 2026-03-16*

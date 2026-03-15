@@ -4,124 +4,128 @@
 
 ## APIs & External Services
 
-**Anthropic Claude:**
-- Claude Agents SDK - Claude session execution and tool approval flow
+**AI Providers:**
+- Anthropic Claude - Primary Claude chat/session execution
   - SDK/Client: `@anthropic-ai/claude-agent-sdk`
-  - Integration point: `server/claude-sdk.js`
-  - Auth: user-managed Claude CLI / local Claude environment, plus optional `ANTHROPIC_API_KEY` checks in `server/routes/cli-auth.js`
-
-**OpenAI Codex:**
-- Codex SDK - Non-interactive Codex thread execution
+  - Integration method: Direct SDK streaming in `server/claude-sdk.js`
+  - Auth: Claude CLI/SDK environment on the host; code also references `ANTHROPIC_API_KEY`
+- OpenAI Codex - Codex chat threads and MCP management
   - SDK/Client: `@openai/codex-sdk`
-  - Integration point: `server/openai-codex.js`
-  - Auth: server process reads `OPENAI_API_KEY` where needed in `server/index.js`
-
-**Cursor CLI:**
-- Local Cursor CLI subprocess execution
-  - Integration method: `child_process.spawn` from `server/cursor-cli.js` and `server/routes/cursor.js`
-  - Auth: user's local Cursor CLI environment
-
-**Gemini CLI:**
-- Local Gemini CLI subprocess execution
-  - Integration method: `child_process.spawn` from `server/gemini-cli.js`
-  - Auth: local Gemini CLI environment and optional `GEMINI_API_KEY`
-  - Binary override: `GEMINI_PATH` in `server/gemini-cli.js`
+  - Integration method: SDK thread lifecycle in `server/openai-codex.js`
+  - Auth: Host Codex environment and `OPENAI_API_KEY`
+- Cursor CLI - Session discovery and command execution
+  - Integration method: Child-process execution plus SQLite/session file reads in `server/cursor-cli.js`, `server/routes/cursor.js`, and `server/projects.js`
+  - Auth: Reads local Cursor config from `~/.cursor/cli-config.json` and `~/.cursor/mcp.json`
+- Gemini CLI - Session execution and discovery
+  - Integration method: Child-process execution and local session persistence in `server/gemini-cli.js` and `server/sessionManager.js`
+  - Auth: Host Gemini environment and `GEMINI_API_KEY`
 
 **GitHub:**
-- GitHub repository cloning and metadata access
-  - SDK/Client: `@octokit/rest` plus `git` CLI
-  - Integration points: `server/routes/agent.js` and `server/routes/projects.js`
-  - Auth: stored GitHub tokens in the local SQLite DB, or one-time token values passed through the workspace wizard
+- GitHub REST API - Branch and pull request creation for agent workflows
+  - SDK/Client: `@octokit/rest`
+  - Integration method: REST API plus local `git` commands in `server/routes/agent.js`
+  - Auth: Stored GitHub token or request-supplied token
+- GitHub Releases API - Client-side version checks
+  - Integration method: `fetch('https://api.github.com/repos/.../releases/latest')` in `src/hooks/useVersionCheck.ts`
+  - Auth: None
 
-**Claude MCP CLI:**
-- MCP server management against the local Claude installation
-  - Integration method: `claude mcp ...` subprocesses from `server/routes/mcp.js`
-  - Scope support: user and project-local MCP configuration
+**Plugin and Ecosystem Services:**
+- TaskMaster CLI - Project/task workflow automation
+  - Integration method: `npx task-master` / `task-master-ai` child-process execution in `server/routes/taskmaster.js`
+  - Auth: Depends on host CLI/environment
+- Discord webhook - Release notification only
+  - Integration point: `.github/workflows/discord-release.yml`
+  - Auth: `DISCORD_WEBHOOK_URL` GitHub Actions secret
 
 ## Data Storage
 
 **Databases:**
-- Local SQLite - Authentication, onboarding, API keys, push subscriptions, session naming, and app config
-  - Connection: `DATABASE_PATH` or default `~/.cloudcli/auth.db`
-  - Client: `better-sqlite3` in `server/database/db.js`
-  - Migrations: schema bootstrap in `server/database/init.sql` plus runtime migrations in `server/database/db.js`
-
-- Cursor session SQLite stores - Read-only discovery of Cursor sessions
-  - Connection: files under `~/.cursor/chats/*/store.db`
-  - Client: `sqlite3` + `sqlite` in `server/projects.js`
+- SQLite (`better-sqlite3`) - Primary app metadata store
+  - Connection: Local file from `DATABASE_PATH` or default `server/database/auth.db`
+  - Client: `better-sqlite3`
+  - Tables include users, API keys, credentials, VAPID keys, push subscriptions, app config, and session names in `server/database/db.js`
+- SQLite (`sqlite` + `sqlite3`) - Read access to Cursor session data
+  - Source: Cursor-managed databases under `~/.cursor/chats/...`
+  - Usage: Session discovery and message loading in `server/projects.js` and `server/routes/cursor.js`
 
 **File Storage:**
-- Local project files - Read/write operations for the file tree and editor in routes inside `server/index.js`
-- Provider session stores - Home-directory data read by `server/projects.js`
-- Plugin install root - `~/.claude-code-ui/plugins` managed by `server/utils/plugin-loader.js`
-- Plugin config - `~/.claude-code-ui/plugins.json`
+- Local filesystem - Core storage strategy
+  - Project files are read/written through endpoints in `server/index.js`
+  - Provider state is read from host home directories such as `~/.claude`, `~/.cursor`, `~/.codex`, and `~/.gemini`
+  - Plugin packages live in `~/.claude-code-ui/plugins` via `server/utils/plugin-loader.js`
 
-**Caching / In-Memory State:**
-- No external cache service
-- In-memory maps track active sessions, pending approvals, PTY sessions, push dedupe keys, and project-directory cache in `server/index.js`, `server/claude-sdk.js`, `server/openai-codex.js`, and `server/projects.js`
+**Caching:**
+- Browser Cache API - Service-worker asset caching in `public/sw.js`
+- In-memory server caches/maps - Project directory cache in `server/projects.js`, active session maps in provider bridges, running plugin registry in `server/utils/plugin-process-manager.js`
 
 ## Authentication & Identity
 
-**Primary auth provider:**
-- Custom JWT auth for OSS mode
-  - Implementation: `server/middleware/auth.js`
-  - Token storage: browser `localStorage` via `src/components/auth/context/AuthContext.tsx` and `src/utils/api.js`
-  - Session management: Bearer tokens on REST, query-string token on WebSocket
+**Auth Provider:**
+- Custom single-user auth
+  - Implementation: bcrypt password hashes + JWTs in `server/routes/auth.js` and `server/middleware/auth.js`
+  - Token storage: `localStorage` on OSS installs via `src/components/auth/context/AuthContext.tsx`
+  - Session management: JWT with optional refreshed token header `X-Refreshed-Token`
 
-**Secondary auth modes:**
-- Platform mode bypass using `VITE_IS_PLATFORM` in `server/constants/config.js` and `src/constants/config.ts`
-- External agent API keys validated from `server/routes/agent.js`
-- Optional global API key gate via `API_KEY` in `server/middleware/auth.js`
+**External API Access Control:**
+- Optional API key gate
+  - Implementation: `validateApiKey` middleware in `server/middleware/auth.js`
+  - Usage: Applied to `/api/**` in `server/index.js`
+- Agent API credentials
+  - Implementation: stored API keys and GitHub tokens referenced by `server/routes/agent.js`
 
 ## Monitoring & Observability
 
+**Error Tracking:**
+- None dedicated
+  - Logging is primarily `console.log`, `console.warn`, and `console.error` across `server/` and client hooks
+
+**Analytics:**
+- None found in the repository
+
 **Logs:**
-- No external logging provider detected
-- Operational logging uses `console.log`, `console.warn`, and `console.error` in server and client code
-
-**Notifications:**
-- Browser Web Push notifications
-  - Integration: `web-push` in `server/services/notification-orchestrator.js`
-  - Key management: VAPID keys in `server/services/vapid-keys.js`
-
-**Error tracking / analytics:**
-- No Sentry, Datadog, Mixpanel, or similar service detected in the repository
+- Stdout/stderr only
+  - Server logs provider commands, WebSocket activity, and some debug file-upload data in `server/index.js`
+  - Plugin subprocess stderr is surfaced in `server/utils/plugin-process-manager.js`
 
 ## CI/CD & Deployment
 
-**Hosting model:**
-- Self-hosted Node server that serves `dist/` when built and proxies to Vite in development
-  - Entry points: `server/cli.js` and `server/index.js`
-  - Frontend build: `npm run build`
+**Hosting:**
+- Self-hosted Node process serving API + static frontend from one runtime in `server/index.js`
+- npm distribution target declared in `package.json` with CLI bins `claude-code-ui` and `cloudcli`
 
-**CI pipeline:**
-- GitHub Actions present, but only release notification automation is committed
-  - Workflow: `.github/workflows/discord-release.yml`
-  - No committed CI test workflow found
+**CI Pipeline:**
+- GitHub Actions
+  - Workflow present: `.github/workflows/discord-release.yml`
+  - Purpose: release notifications to Discord
+  - No automated test/build workflow was found in `.github/workflows/`
 
 ## Environment Configuration
 
 **Development:**
-- Critical variables include `PORT`, `HOST`, `VITE_PORT`, `DATABASE_PATH`, `JWT_SECRET`, `API_KEY`, `WORKSPACES_ROOT`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GEMINI_PATH`, `CONTEXT_WINDOW`, and `VITE_IS_PLATFORM`
-- `.env` is loaded by `server/load-env.js`
+- Key env vars documented in `.env.example`
+- Secrets/config live in environment variables and host-managed config files under `~/.claude`, `~/.cursor`, `~/.codex`, `~/.gemini`, and `~/.claude-code-ui`
+- Dev proxy routes `/api`, `/ws`, and `/shell` through Vite in `vite.config.js`
 
 **Production:**
-- Same variables are consumed directly by the Node process
-- No secret manager integration is committed; deployment relies on environment variables
+- Secrets management is host-level environment management; no cloud secret manager integration is present in-repo
+- Platform mode toggles with `VITE_IS_PLATFORM` and changes auth/WebSocket behavior in `server/constants/config.js` and `src/constants/config.ts`
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- No third-party webhook endpoints were identified in the committed server routes
+- Browser push callbacks via service worker in `public/sw.js`
+  - Handles `push` and `notificationclick` events
+  - Navigation payloads are relayed back into the app window
 
 **Outgoing:**
-- Browser push notifications are sent to stored subscription endpoints from `server/services/notification-orchestrator.js`
-- Plugin RPC calls are proxied from `/api/plugins/:name/rpc/*` to local plugin subprocesses in `server/routes/plugins.js`
-
-**Realtime transport:**
-- `/ws` - App chat/session WebSocket handled in `server/index.js`
-- `/shell` - Terminal/PTY WebSocket handled in `server/index.js`
+- Web Push notifications
+  - Triggered through `web-push` in `server/services/notification-orchestrator.js`
+  - VAPID key management lives in `server/services/vapid-keys.js`
+- Plugin RPC proxying
+  - Requests are forwarded to local plugin subprocesses via `/api/plugins/:name/rpc/*` in `server/routes/plugins.js`
+- GitHub branch/PR creation
+  - Outbound REST calls and `git push` happen in `server/routes/agent.js`
 
 ---
 *Integration audit: 2026-03-16*
-*Update when adding or removing external services*
+*Update when adding/removing external services*

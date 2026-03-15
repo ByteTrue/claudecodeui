@@ -5,89 +5,84 @@
 ## Languages
 
 **Primary:**
-- TypeScript 5.9 - Most modern client code in `src/**/*.ts` and `src/**/*.tsx`
-- JavaScript (ES modules) - Server runtime, legacy client modules, shared constants, and scripts in `server/**/*.js`, `src/**/*.js`, `shared/*.js`, and `scripts/*.js`
+- TypeScript 5.9 - Main frontend application code in `src/**/*.ts` and `src/**/*.tsx`
+- JavaScript (ES modules) - Server runtime, shared model constants, config, and legacy frontend modules in `server/**/*.js`, `shared/modelConstants.js`, and `src/**/*.js`
 
 **Secondary:**
-- JSON - Translation namespaces under `src/i18n/locales/*/*.json`
-- CSS - Global styles in `src/index.css`
-- SQL - Database schema bootstrap in `server/database/init.sql`
+- SQL - SQLite schema and migrations in `server/database/init.sql`
+- JSON - Locale packs and configuration payloads in `src/i18n/locales/**` and root config files
+- Markdown - User docs and plugin/task docs in `README.md`, localized READMEs, and `src/components/chat/tools/README.md`
 
 ## Runtime
 
 **Environment:**
-- Node.js 22+ - Required by the published self-hosted package and the Express backend described in `README.md`
-- Browser runtime - React SPA mounted from `src/main.jsx`
+- Node.js 22+ recommended for self-hosted usage according to `README.md`
+- Browser runtime for the SPA served from `dist/`
+- ESM package runtime via `"type": "module"` in `package.json`
 
 **Package Manager:**
-- npm - Scripts and dependency lockfile are defined in `package.json`
+- npm
 - Lockfile: `package-lock.json` present
 
 ## Frameworks
 
 **Core:**
-- React 18.2 - UI layer rooted at `src/main.jsx` and `src/App.tsx`
-- React Router 6 - Session-aware routing in `src/App.tsx`
-- Express 4 - HTTP API and static asset server in `server/index.js`
-- `ws` - WebSocket transport for chat and shell channels in `server/index.js`
+- React 18.2 - UI composition in `src/App.tsx` and feature folders under `src/components/`
+- Express 4.18 - REST API and static asset host in `server/index.js`
+- `ws` 8.x - Shared WebSocket server for `/ws` chat and `/shell` terminal transport in `server/index.js`
 
-**UI / Interaction:**
-- Tailwind CSS 3 - Utility-first styling used throughout `src/**/*.tsx`
-- i18next + react-i18next - Localization bootstrap in `src/i18n/config.js`
-- CodeMirror 6 - Editor surface in `src/components/code-editor/**`
-- xterm.js 5 - Terminal UI in `src/components/shell/**` and `src/components/standalone-shell/**`
+**Testing:**
+- No dedicated test framework is currently configured in `package.json`
+- Verification is currently lint/typecheck oriented: `npm run lint`, `npm run typecheck`
 
-**AI / Provider Integration:**
-- `@anthropic-ai/claude-agent-sdk` - Claude integration in `server/claude-sdk.js`
-- `@openai/codex-sdk` - Codex integration in `server/openai-codex.js`
-- Cursor CLI / Gemini CLI subprocess adapters - `server/cursor-cli.js` and `server/gemini-cli.js`
-
-**Build / Dev:**
-- Vite 7 - Frontend dev server and bundling in `vite.config.js`
-- TypeScript compiler - Type checking via `npm run typecheck`
-- ESLint 9 - Linting via `eslint.config.js`
-- Concurrently - Dual-process local dev via `npm run dev`
+**Build/Dev:**
+- Vite 7 - Frontend dev server, proxying, and bundling in `vite.config.js`
+- TypeScript 5.9 - Type checking with `strict: true` and `allowJs: true` in `tsconfig.json`
+- Tailwind CSS 3.4 - Utility styling configured in `tailwind.config.js`
+- ESLint 9 + `typescript-eslint` - Static analysis configured in `eslint.config.js`
 
 ## Key Dependencies
 
 **Critical:**
-- `express` - Main API server and static file hosting
-- `@anthropic-ai/claude-agent-sdk` - Claude chat/session execution
-- `@openai/codex-sdk` - Codex session execution
-- `react`, `react-dom`, `react-router-dom` - SPA shell and navigation
-- `better-sqlite3` - Local auth/config persistence in `server/database/db.js`
-- `node-pty` - Shell/PTTY support in `server/index.js`
+- `@anthropic-ai/claude-agent-sdk` - Claude provider integration in `server/claude-sdk.js`
+- `@openai/codex-sdk` - Codex provider integration in `server/openai-codex.js`
+- `express` - HTTP API host and route composition in `server/index.js`
+- `react` and `react-router-dom` - SPA rendering and session routing in `src/App.tsx`
+- `better-sqlite3` - Local auth/settings/session metadata database in `server/database/db.js`
+- `node-pty` - Interactive shell/PTY support for the terminal UI in `server/index.js`
+- `ws` - WebSocket transport for live chat updates and shell streaming in `server/index.js`
 
 **Infrastructure:**
-- `ws` - Browser-to-server real-time transport
-- `chokidar` - Provider directory watchers in `server/index.js`
-- `web-push` - Browser push notifications in `server/services/notification-orchestrator.js`
-- `@octokit/rest` - GitHub API access in `server/routes/agent.js`
-- `multer`, `mime-types`, `jszip` - Upload and file handling paths in `server/index.js`
+- `chokidar` - Provider project/session filesystem watchers in `server/index.js`
+- `web-push` - Browser push notification delivery in `server/services/notification-orchestrator.js`
+- `@octokit/rest` - GitHub PR/branch helpers in `server/routes/agent.js`
+- `sqlite` + `sqlite3` - Cursor chat/session discovery in `server/projects.js` and `server/routes/cursor.js`
+- `@uiw/react-codemirror` and CodeMirror language packages - Embedded editor in `src/components/code-editor/`
+- `@xterm/xterm` and addons - Terminal surface in `src/components/shell/`
 
 ## Configuration
 
 **Environment:**
-- `.env` is parsed manually in `server/load-env.js`
-- Common server vars referenced in code: `PORT`, `HOST`, `VITE_PORT`, `DATABASE_PATH`, `JWT_SECRET`, `API_KEY`, `WORKSPACES_ROOT`, `CONTEXT_WINDOW`, `CLAUDE_TOOL_APPROVAL_TIMEOUT_MS`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GEMINI_PATH`, and `VITE_IS_PLATFORM`
+- `.env.example` documents `PORT`, `VITE_PORT`, `HOST`, `DATABASE_PATH`, `CONTEXT_WINDOW`, and `VITE_CONTEXT_WINDOW`
+- Additional runtime env lookups include `JWT_SECRET`, `API_KEY`, `WORKSPACES_ROOT`, `CLAUDE_CLI_PATH`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, and `VITE_IS_PLATFORM`
+- Server env loading starts in `server/load-env.js` via `server/index.js`
 
 **Build:**
-- `vite.config.js` - Dev proxying, manual chunking, build output
-- `tsconfig.json` - Client/shared TS compiler settings
-- `eslint.config.js` - Lint rules for React, hooks, import order, Tailwind, and unused imports
+- `vite.config.js` - Frontend dev proxy and chunk splitting
+- `tsconfig.json` - TypeScript compiler behavior for `src`, `shared`, and `vite.config.js`
+- `eslint.config.js` - lint rules for JS/TS React code
+- `tailwind.config.js` and `postcss.config.js` - styling pipeline
 
 ## Platform Requirements
 
 **Development:**
-- Node.js 22+ with npm
-- Git available on PATH for routes in `server/routes/git.js`, workspace cloning in `server/routes/projects.js`, and plugin install/update flows
-- Local provider tooling expected on PATH or in user home directories: Claude, Cursor CLI, Codex, Gemini
+- Local machine with Node.js, npm, and installed CLIs/providers the app shells out to (`claude`, `codex`, `cursor`, `gemini`) depending on enabled features
+- Browser with WebSocket and service worker support for the full UX (`src/contexts/WebSocketContext.tsx`, `public/sw.js`)
 
-**Production / Runtime:**
-- Single Node process serving both REST and WebSocket traffic from `server/index.js`
-- Writable local filesystem for SQLite, plugin installs, and provider session discovery
-- Access to user-home provider directories such as `~/.claude`, `~/.cursor`, `~/.codex`, and `~/.gemini`
+**Production:**
+- Single Node.js host serving both the API and built Vite assets from `server/index.js`
+- Writable local filesystem for SQLite, plugin installs, session metadata, and provider config directories under the user home directory
 
 ---
 *Stack analysis: 2026-03-16*
-*Update after major dependency or runtime changes*
+*Update after major dependency changes*

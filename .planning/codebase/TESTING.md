@@ -5,97 +5,119 @@
 ## Test Framework
 
 **Runner:**
-- No automated unit, integration, or end-to-end test runner is currently committed
-- No `test` or `test:*` scripts are defined in `package.json`
+- No dedicated unit/integration/E2E test runner is currently configured in `package.json`
+- No `vitest.config.*`, `jest.config.*`, `playwright.config.*`, or equivalent test config files were found at the repo root
 
 **Assertion Library:**
-- None detected in the committed codebase
+- None configured in-repo
+- Current verification is tool-based rather than assertion-based
 
-**Current quality commands:**
+**Run Commands:**
 ```bash
-npm run lint        # ESLint checks for frontend source
-npm run typecheck   # TypeScript validation for src/ and shared/
-npm run build       # Production frontend build
-npm run dev         # Manual end-to-end verification with server + Vite
+npm run lint        # Lint `src/` with ESLint
+npm run typecheck   # Type-check TS/TSX/JS-in-TS-program with `tsc --noEmit`
+npm run build       # Build the frontend bundle with Vite
 ```
 
 ## Test File Organization
 
 **Location:**
-- No `tests/`, `__tests__/`, `*.test.*`, `*.spec.*`, Playwright, Vitest, Jest, or Cypress files were found
+- No `tests/` directory was found
+- No colocated `*.test.*` or `*.spec.*` files were found under `src/`, `server/`, `shared/`, or the repo root
 
-**Implication:**
-- There is no established automated test layout to follow yet
-- Any new test strategy will need to define its own structure before it can be repeated consistently
+**Naming:**
+- There is no established test file naming pattern yet
 
-## Current Verification Style
+**Structure:**
+```text
+Current state:
+- Source lives in `src/`, `server/`, and `shared/`
+- Automated test files are absent
+```
 
-**Manual regression checks appear to be the default:**
-- Start the full stack with `npm run dev`
-- Exercise the main UI surfaces: chat, files, shell, git, settings, onboarding, and plugins
-- Validate backend behavior through the SPA and the REST/WebSocket routes exposed by `server/index.js`
+## Test Structure
 
-**High-value areas for manual smoke testing:**
-- `src/components/chat/**` with provider selection and message streaming
-- `src/components/file-tree/**` for browsing, editing, rename, delete, and upload flows
-- `src/components/shell/**` and `src/components/standalone-shell/**` for PTY connectivity
-- `src/components/git-panel/**` for diffs, commit flows, and branch operations
-- `src/components/project-creation-wizard/**` and `server/routes/projects.js` for workspace creation
+**Current Practice:**
+- Frontend correctness appears to rely on manual UX verification plus lint/typecheck/build
+- Backend correctness appears to rely on route-level defensive coding and manual exercise of the UI/CLI flows
+- Release automation in `.github/workflows/discord-release.yml` does not run tests
+
+**Patterns:**
+- When behavior is safety-sensitive, the code tends to add runtime guards instead of a corresponding test
+- Reconnect/session behavior is often hardened in hook logic, for example `src/contexts/WebSocketContext.tsx` and `src/components/chat/hooks/useChatRealtimeHandlers.ts`
 
 ## Mocking
 
-**Established framework:**
-- None committed
+**Framework:**
+- None configured
 
-**Likely seams for future test doubles:**
-- Browser `fetch` calls behind `src/utils/api.js`
-- WebSocket behavior in `src/contexts/WebSocketContext.tsx`
-- Provider adapters in `server/claude-sdk.js`, `server/openai-codex.js`, `server/cursor-cli.js`, and `server/gemini-cli.js`
-- Filesystem, `git`, and `node-pty` operations in `server/index.js`, `server/routes/git.js`, and `server/routes/projects.js`
+**Patterns:**
+- No repository-level mocking conventions exist yet
+
+**What to Mock First When Tests Are Added:**
+- Provider SDK/CLI boundaries in `server/claude-sdk.js`, `server/openai-codex.js`, `server/cursor-cli.js`, `server/gemini-cli.js`
+- Filesystem/home-directory reads in `server/projects.js` and `server/routes/*.js`
+- WebSocket and PTY boundaries in `server/index.js` and `src/components/shell/`
 
 ## Fixtures and Factories
 
-**Current state:**
-- No shared fixtures or test factories are committed
-- Representative runtime data comes from real provider directories and the local SQLite database rather than a dedicated fixture system
+**Test Data:**
+- No fixture or factory directories were found
+- Existing code generally builds objects inline rather than through reusable test factories
+
+**Location Recommendation Based on Current Structure:**
+- Backend integration fixtures would fit under a new `tests/server/`
+- Frontend component/hook tests would fit colocated in `src/components/**` or `src/hooks/**`
 
 ## Coverage
 
 **Requirements:**
-- No automated coverage target is configured
-- No CI step enforces test execution or coverage thresholds
+- No coverage target or enforcement was found
 
 **Configuration:**
-- None detected for Jest, Vitest, Playwright, or NYC
+- No coverage tooling is configured
+
+**View Coverage:**
+```bash
+# Not available yet - coverage tooling has not been added
+```
 
 ## Test Types
 
 **Unit Tests:**
 - Not present
+- Best candidates: pure helpers in `src/utils/`, `src/lib/`, `server/utils/`, and project/session parsing in `server/projects.js`
 
 **Integration Tests:**
 - Not present
+- Highest-value future targets: auth flow, project discovery, file operations, Git routes, plugin RPC, and TaskMaster route flows
 
 **E2E Tests:**
 - Not present
+- High-value user journeys: login/setup, project selection, chat streaming, shell attach, file edit, Git commit flow, plugin enable/install
 
-**Closest existing substitutes:**
-- Lint/typecheck/build commands in `package.json`
-- Manual browser verification against the full local stack
+## Common Patterns
 
-## Practical Guidance For Future Tests
+**Current Verification Pattern:**
+```text
+1. Run `npm run lint`
+2. Run `npm run typecheck`
+3. Run `npm run build`
+4. Manually exercise the affected UI/server flow
+```
 
-**If you introduce the first automated tests, align them with current code seams:**
-- Frontend component and hook tests should live close to the owning feature folder in `src/components/**` or `src/hooks/**`
-- Backend integration tests should target route modules in `server/routes/*.js` and the monolithic flows in `server/index.js`
-- Provider-facing tests will need stable mocks for SDKs, CLI subprocesses, and WebSocket writers
+**Error-Prone Untested Areas:**
+- WebSocket reconnect and pending permission recovery
+- PTY shell connection lifecycle
+- Provider-specific session resume/abort flows
+- Plugin install/update/asset/rpc lifecycle
 
-**Highest-risk gaps today:**
-- Provider session execution and reconnection flows
-- Filesystem watcher driven project refreshes
-- Git and file-mutation endpoints
-- Plugin install / start / proxy lifecycle
+## Recommendations
+
+- Add at least one automated test layer before expanding major features
+- Start with fast backend unit/integration coverage around `server/projects.js`, `server/routes/auth.js`, and provider message normalization
+- Add focused frontend tests for chat/session state hooks before snapshot-style component coverage
 
 ---
 *Testing analysis: 2026-03-16*
-*Update when automated tests or patterns are introduced*
+*Update when test patterns change*

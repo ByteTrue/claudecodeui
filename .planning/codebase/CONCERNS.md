@@ -4,155 +4,131 @@
 
 ## Tech Debt
 
-**Monolithic backend entrypoint:**
-- Issue: `server/index.js` is about 2555 lines and mixes startup, middleware, routes, uploads, file operations, shell handling, and WebSocket orchestration
-- Why: The project grew feature-by-feature inside a single runtime file
-- Impact: High merge risk, difficult onboarding, and fragile edits because unrelated flows share the same file
-- Fix approach: continue extracting domains into `server/routes/`, `server/services/`, and focused modules until `server/index.js` becomes composition-only
+**Server orchestration concentrated in one file:**
+- Issue: `server/index.js` owns startup, middleware, static serving, file APIs, upload handling, WebSocket routing, PTY transport, and assorted project/file endpoints in one very large module
+- Why: Features were layered onto the original server entry instead of being fully extracted into route/service modules
+- Impact: High regression risk when touching unrelated behavior; difficult local reasoning and low isolation for refactors
+- Fix approach: Continue extracting REST/file/WebSocket subsystems into dedicated modules and leave `server/index.js` as composition/bootstrap only
 
-**Very large route modules:**
-- Issue: `server/routes/taskmaster.js`, `server/routes/git.js`, and `server/routes/agent.js` are each large orchestrators instead of thin route layers
-- Why: Route handlers own business logic, subprocess calls, and response shaping directly
-- Impact: Hard to test in isolation and easy to introduce regressions when adding one more endpoint
-- Fix approach: move provider/git/taskmaster operations into service modules with narrower responsibilities
+**Mixed JS/TS boundary with partial typing:**
+- Issue: The repo mixes strict TypeScript frontend code with large JavaScript server modules while `tsconfig.json` sets `allowJs: true`
+- Why: Incremental migration and legacy server code
+- Impact: Cross-layer contracts can drift silently; refactors are harder because server/runtime modules do not benefit from the same type guarantees
+- Fix approach: Gradually type critical server modules (`server/index.js`, provider bridges, `server/projects.js`) or introduce typed facade modules at boundaries
 
-**Mixed-language boundary:**
-- Issue: frontend code is split across TypeScript and JavaScript, while the server is entirely JavaScript
-- Why: the codebase has been incrementally migrated rather than rewritten
-- Impact: shared contracts between `src/utils/api.js` and `server/routes/*.js` are only loosely typed
-- Fix approach: define shared DTO types or schemas and gradually convert critical server modules to TypeScript or runtime validation
+**Provider/session state lives in process memory:**
+- Issue: Active session maps, pending approvals, plugin process registries, and Gemini session cache are in-memory (`server/claude-sdk.js`, `server/openai-codex.js`, `server/utils/plugin-process-manager.js`, `server/sessionManager.js`)
+- Why: Simpler live-session orchestration
+- Impact: Server restarts drop transient state and complicate resumability/debugging
+- Fix approach: Persist more resumable metadata and keep process memory limited to active transports
 
-**Manual i18n resource registration:**
-- Issue: `src/i18n/config.js` manually imports every locale/namespace pair
-- Why: straightforward initial setup
-- Impact: adding a locale or namespace is easy to forget, and coverage can drift between languages
-- Fix approach: generate resource maps or centralize locale manifests instead of hand-maintaining every import
+## Known Bugs
 
-## Known Bugs / Observed Risk Areas
+**Cursor-only project discovery is incomplete by design:**
+- Symptoms: Projects that only exist in Cursor can be invisible until manually added
+- Trigger: User has Cursor chats for a repo that has no Claude/manual project entry
+- Workaround: Add the project manually through the UI so `server/projects.js` can compute the hash and discover sessions
+- Root cause: `server/projects.js` documents that Cursor project path cannot be reconstructed reliably from stored data alone
 
-**Project discovery depends on provider-specific filesystem layouts:**
-- Symptoms: session lists can break if external CLIs change their on-disk formats or if projects are moved
-- Trigger: provider upgrades or path changes outside the app
-- Workaround: manually re-add projects and refresh discovery
-- Root cause: `server/projects.js` decodes provider state from home-directory files and Cursor hash conventions
-
-**Watcher refreshes can overreact on noisy directories:**
-- Symptoms: repeated `projects_updated` broadcasts and unnecessary rescans
-- Trigger: bursts of writes inside watched provider directories
-- Workaround: debounce is already present, but not all rescans are avoided
-- Root cause: `server/index.js` clears caches and reruns `getProjects()` on filesystem events
+**TaskMaster automation depends on CLI prompt shape:**
+- Symptoms: TaskMaster initialization can fail or hang if upstream CLI prompts change
+- Trigger: `server/routes/taskmaster.js` posts `'yes\\n'` into spawned CLI processes and assumes the current interaction contract
+- Workaround: Run TaskMaster manually when automation breaks
+- Root cause: brittle child-process prompt automation rather than a stable programmatic API
 
 ## Security Considerations
 
-**JWTs live in browser localStorage and WebSocket query strings:**
-- Risk: token exposure through XSS, browser tooling, or logs
-- Current mitigation: server-side JWT validation in `server/middleware/auth.js`
-- Recommendations: prefer httpOnly cookies or a short-lived socket token exchange if auth is tightened further
+**Sensitive data can reach logs:**
+- Risk: WebSocket chat commands, provider prompts, upload metadata, and path info are logged in `server/index.js`
+- Current mitigation: None beyond normal server log access controls
+- Recommendations: Gate debug logs behind an env flag, scrub prompts/paths by default, and avoid logging raw user input in production
 
-**Plugin installation is a code-execution trust boundary:**
-- Risk: installing a plugin from git ultimately downloads and can execute third-party code through plugin servers
-- Current mitigation: manifest validation, path checks, and dedicated plugin directories in `server/utils/plugin-loader.js`
-- Recommendations: document plugin trust expectations clearly and consider stronger sandboxing or plugin allowlists
+**JWT tokens may travel in query parameters:**
+- Risk: Token-bearing URLs can be captured in logs/history when query-string auth is used
+- Current mitigation: Header-based auth is used where possible; query token support exists for EventSource-style cases in `server/middleware/auth.js` and `src/utils/api.js`
+- Recommendations: Minimize query-token usage, prefer authenticated fetch/WebSocket headers where supported, and avoid exposing tokenized URLs outside the immediate request
 
-**High-privilege filesystem and subprocess routes:**
-- Risk: regressions in path validation can become destructive because routes touch git, the local filesystem, and subprocess execution
-- Current mitigation: explicit validation helpers in `server/routes/projects.js` and `server/routes/git.js`
-- Recommendations: keep path validation centralized, add regression tests before broadening these endpoints, and review any new shell/file surface carefully
+**Plugin installation is trust-based:**
+- Risk: Installing a plugin from Git runs third-party Node code on the host
+- Current mitigation: Manifest/path validation, restricted child-process env, and local-only RPC proxying in `server/utils/plugin-loader.js` and `server/utils/plugin-process-manager.js`
+- Recommendations: Treat plugin install as privileged, add stronger signing/review guidance, and consider sandboxing or permission prompts per plugin capability
 
 ## Performance Bottlenecks
 
-**Full project rescans on watcher events:**
-- Problem: the server recalculates the full project list after provider directory changes
-- Measurement: no benchmark is committed, but the design is O(all discovered projects and sessions) per refresh
-- Cause: `getProjects()` is the single refresh path
-- Improvement path: incrementally update changed providers or cache session metadata more aggressively
+**Project rescans on filesystem changes:**
+- Problem: Provider watchers in `server/index.js` can trigger a full `getProjects()` refresh whenever watched session/project files change
+- Measurement: No benchmark found in-repo
+- Cause: Simplicity over incremental diffing; many provider folders are watched at once
+- Improvement path: Cache provider/session metadata more aggressively and limit rescans to affected provider/project scopes
 
-**Large initial client payloads:**
-- Problem: the client eagerly loads multiple heavy feature systems plus translation resources
-- Measurement: no bundle report is committed, but Vite manual chunking in `vite.config.js` indicates bundle size is already a concern
-- Cause: CodeMirror, xterm, markdown rendering, and all locale resources are part of the frontend package
-- Improvement path: lazy-load more feature surfaces and move locale/resource loading behind async boundaries
+**Client-side release polling hits GitHub repeatedly:**
+- Problem: Every active client polls GitHub Releases every 5 minutes in `src/hooks/useVersionCheck.ts`
+- Measurement: No rate/usage telemetry found
+- Cause: Direct browser polling instead of server-side caching
+- Improvement path: Cache latest release server-side or reduce frequency/back off after failures
 
 ## Fragile Areas
 
-**WebSocket protocol coupling:**
-- Why fragile: message types are stringly typed across `server/index.js`, `src/contexts/WebSocketContext.tsx`, and multiple chat/shell features
-- Common failures: adding or renaming a message type without updating both ends breaks UI behavior silently
-- Safe modification: update both transport ends together and manually smoke-test reconnect, abort, and permission flows
-- Test coverage: no automated coverage detected
+**WebSocket session lifecycle:**
+- Why fragile: Multiple providers share one `/ws` transport with provider-specific message types and reconnect behavior
+- Common failures: Session state mismatch after reconnect, stale loading flags, provider-specific edge cases during resume/abort
+- Safe modification: Keep message contracts explicit and change both `server/index.js` and `src/components/chat/hooks/useChatRealtimeHandlers.ts` together
+- Test coverage: No automated coverage found
 
-**Provider adapter behavior:**
-- Why fragile: each provider has distinct transport semantics, session IDs, and abort behavior
-- Common failures: resume/abort edge cases, event-shape mismatches, and notification cleanup leaks
-- Safe modification: compare behavior across `server/claude-sdk.js`, `server/openai-codex.js`, `server/cursor-cli.js`, and `server/gemini-cli.js` before changing shared assumptions
-- Test coverage: no automated coverage detected
+**Shell/PTY bridge:**
+- Why fragile: Browser terminal state, PTY lifecycle, auth URL detection, and reconnect behavior interact across `server/index.js` and `src/components/shell/`
+- Common failures: lost terminal state, duplicate sockets, auth URL parsing regressions, platform-specific PTY issues
+- Safe modification: Treat server shell handling and `useShellRuntime`/`useShellConnection` as one unit; verify on real terminals
+- Test coverage: No automated coverage found
 
-**Shell / PTY handling:**
-- Why fragile: PTY lifecycle, URL parsing, and browser transport all meet inside `server/index.js`
-- Common failures: orphaned sessions, broken terminal reconnects, and malformed URL extraction
-- Safe modification: test `/shell` end-to-end with a real PTY after any change
-- Test coverage: no automated coverage detected
+**Filesystem mutation endpoints:**
+- Why fragile: Upload/create/rename/delete flows in `server/index.js` combine path normalization, auth, and file IO
+- Common failures: path validation regressions, platform path edge cases, unexpected target directories
+- Safe modification: Preserve path-validation helpers and add isolated route tests before large refactors
+- Test coverage: No automated coverage found
 
 ## Scaling Limits
 
-**Single-process architecture:**
-- Current capacity: one Node process owns HTTP, WebSocket, watchers, PTYs, notifications, and local SQLite access
-- Limit: horizontal scaling is not straightforward because runtime state is held in memory
-- Symptoms at limit: session-state drift, duplicate watchers, and DB contention if multiple instances are introduced
-- Scaling path: move session/process coordination and durable state into services that can survive multiple app instances
+**Single-host local architecture:**
+- Current capacity: One Node process per deployment with local SQLite and host filesystem dependencies
+- Limit: Horizontal scaling is impractical because live sessions, PTYs, plugin subprocesses, and provider home-directory state are host-local
+- Symptoms at limit: Lost live session affinity, duplicated watcher work, inconsistent local file/session visibility
+- Scaling path: Introduce explicit multi-tenant/session coordination or keep deployment model single-host by design
 
-**Local-storage-based discovery model:**
-- Current capacity: best suited to one machine or one mounted workspace environment
-- Limit: project/session discovery depends on local home directories and local filesystem access
-- Symptoms at limit: harder remote deployment and weaker separation between app state and host state
-- Scaling path: formalize provider/session ingestion behind stable APIs instead of direct filesystem reads
+## Dependencies at Risk
 
-## Dependencies At Risk
+**Local CLI dependencies (`claude`, `codex`, `cursor`, `gemini`, `task-master`):**
+- Risk: Upstream CLI behavior, output formats, or auth flows can change outside this repo
+- Impact: Session execution, MCP management, and TaskMaster automation can break without code changes here
+- Migration plan: Isolate adapters further and add smoke tests/contract tests around child-process interfaces
 
-**Native Node modules:**
-- Risk: `node-pty` and `better-sqlite3` are native modules that can become painful during Node upgrades or cross-platform packaging
-- Impact: terminal and database features can fail at install time
-- Migration plan: keep Node version support explicit and isolate native-module assumptions behind small wrappers
-
-**Fast-moving provider SDKs / CLIs:**
-- Risk: `@anthropic-ai/claude-agent-sdk`, `@openai/codex-sdk`, and external CLIs evolve quickly
-- Impact: message/event format changes can break session rendering or auth flows
-- Migration plan: keep adapter modules narrow and avoid leaking provider-specific event shapes into the broader UI
+**`node-pty`:**
+- Risk: Native dependency with platform/build sensitivity
+- Impact: Shell functionality can fail during install or after Node upgrades
+- Migration plan: Keep install workaround scripts current (`scripts/fix-node-pty.js`) and test on supported host environments before upgrades
 
 ## Missing Critical Features
 
 **Automated regression suite:**
-- Problem: there is no committed automated test harness for core chat, shell, git, or file editing flows
-- Current workaround: lint, typecheck, build, and manual QA
-- Blocks: safe refactors of large orchestrator files
-- Implementation complexity: medium to high because provider and PTY dependencies need controlled test seams
-
-**Shared API contract validation:**
-- Problem: frontend/server payloads are coordinated implicitly rather than through shared schemas
-- Current workaround: rely on ad hoc TS types in the frontend and careful manual edits on the backend
-- Blocks: faster endpoint evolution and safer refactors
-- Implementation complexity: medium
+- Problem: Core flows have no automated safety net
+- Current workaround: lint/typecheck/build + manual verification
+- Blocks: Confident refactors across provider/session/shell code
+- Implementation complexity: Medium; start with backend integration tests and a few UI smoke flows
 
 ## Test Coverage Gaps
 
-**Provider execution flows:**
-- What's not tested: start, stream, resume, abort, and reconnect behavior across providers
-- Risk: changes can silently break live chat sessions
+**Provider bridges and live transport:**
+- What's not tested: Claude/Codex/Cursor/Gemini message normalization, reconnect behavior, permission approval flow
+- Risk: Real-time regressions are easy to ship unnoticed
 - Priority: High
-- Difficulty to test: requires SDK/CLI doubles and socket transport harnesses
+- Difficulty to test: Moderate because provider adapters need good fakes/mocks
 
-**Filesystem mutation routes:**
-- What's not tested: file create/rename/delete/upload, workspace creation, and git operations
-- Risk: destructive regressions on user workspaces
+**Project and filesystem operations:**
+- What's not tested: project discovery, workspace creation, upload/path validation, GitHub clone/branch/PR helpers
+- Risk: Can break onboarding and destructive file flows
 - Priority: High
-- Difficulty to test: requires temp repos, temp directories, and platform-aware subprocess fixtures
-
-**Watcher-driven project refresh logic:**
-- What's not tested: chokidar event handling and the `projects_updated` reconciliation path
-- Risk: stale or noisy project lists in the UI
-- Priority: Medium
-- Difficulty to test: requires synthetic filesystem events and websocket assertions
+- Difficulty to test: Moderate to high because of home-directory and git/process dependencies
 
 ---
 *Concerns audit: 2026-03-16*
-*Update as issues are fixed or new ones are discovered*
+*Update as issues are fixed or new ones discovered*

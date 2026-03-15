@@ -5,38 +5,39 @@
 ## Naming Patterns
 
 **Files:**
-- Feature directories are kebab-case, for example `src/components/file-tree/` and `src/components/project-creation-wizard/`
-- React component files are usually `PascalCase.tsx`, especially under `view/`
-- Hooks use the `useX` prefix, for example `src/hooks/useProjectsState.ts` and `src/components/chat/hooks/useChatSessionState.ts`
-- Utility modules use lowercase or camel-style names such as `src/utils/api.js`, `server/utils/plugin-loader.js`, and `src/lib/utils.js`
+- React view components use `PascalCase.tsx`, for example `src/components/chat/view/ChatInterface.tsx`
+- Hooks use `useXxx.ts` or `useXxx.tsx`, for example `src/hooks/useProjectsState.ts` and `src/components/chat/hooks/useChatRealtimeHandlers.ts`
+- Server/runtime modules are usually lowercase or kebab-style `.js`, for example `server/openai-codex.js` and `server/plugin-process-manager.js`
+- Feature support files frequently use canonical names like `types.ts`, `constants.ts`, `utils.ts`, or `index.ts`
 
 **Functions:**
-- Functions use camelCase across both client and server
-- Event handlers commonly use `handleX` naming, for example `handleProjectCreated` in `src/components/sidebar/view/Sidebar.tsx`
-- Async functions are named by action rather than `fetch`/`async` prefixes only, for example `checkAuthStatus`, `refreshProjectsSilently`, and `validateWorkspacePath`
+- camelCase for general helpers and handlers, such as `validateWorkspacePath`, `refreshProjectsSilently`, and `handleWebSocketReconnect`
+- Event handlers typically use `handleXxx` naming in React components and server code
+- Async functions do not use a special prefix; they rely on `async`/`await`
 
 **Variables:**
-- Local variables use camelCase
-- Shared constants use UPPER_SNAKE_CASE, for example `VALID_PROVIDERS`, `WORKSPACES_ROOT`, and `AUTH_TOKEN_STORAGE_KEY`
-- React refs use the `SomethingRef` suffix
+- camelCase for regular values
+- UPPER_SNAKE_CASE for shared constants like `VALID_PROVIDERS`, `WATCHER_DEBOUNCE_MS`, and `AUTH_TOKEN_STORAGE_KEY`
+- refs in React commonly end with `Ref`, e.g. `pendingViewSessionRef`, `terminalRef`
 
 **Types:**
-- Type aliases and interfaces are `PascalCase`
-- Type-only imports are used explicitly in many TSX files, for example `import type { Project } from '../../../types/app';`
-- There is no `I` prefix convention for interfaces
+- PascalCase for TypeScript types and interfaces, e.g. `Project`, `ProjectSession`, `AuthContextValue`
+- No `I` prefix convention
+- Broad `any` is still allowed in places; ESLint explicitly turns off `@typescript-eslint/no-explicit-any`
 
 ## Code Style
 
 **Formatting:**
-- Single quotes are the default string style across client and server
-- Semicolons are used consistently
-- React code uses the modern JSX transform (`jsx: react-jsx` in `tsconfig.json`)
-- Tailwind utility classes are written inline in JSX
+- Semicolons are consistently used
+- Single quotes are the dominant string style in both client and server
+- Indentation is generally two spaces in frontend TSX and two/four spaces in older server JS modules
+- Mixed JS/TS codebase: TypeScript is strict, but JavaScript files are still first-class via `allowJs: true`
 
 **Linting:**
-- ESLint is configured in `eslint.config.js`
-- React hooks, import ordering, Tailwind class ordering, and unused imports are enforced or warned on
-- Main commands: `npm run lint` and `npm run lint:fix`
+- ESLint flat config in `eslint.config.js`
+- React, hooks, import ordering, Tailwind class ordering, and unused import plugins are enabled
+- `import-x/order` is configured with `newlines-between: "never"`
+- Run with `npm run lint`
 
 ## Import Organization
 
@@ -44,79 +45,77 @@
 1. External packages
 2. Internal project modules
 3. Relative imports
-4. Type imports, often split out with `import type`
+4. Type imports are used selectively, not universally separated
 
 **Grouping:**
-- Files usually keep a small number of import groups with blank lines between conceptual sections
-- Path aliases are not configured; relative imports are the norm
+- The repo usually keeps imports tightly packed with no blank line between groups, matching ESLint config
+- Sorting is partially automated/enforced by lint rules but not perfectly alphabetized everywhere
 
-**Path patterns:**
-- Frontend imports are rooted off `src/` via relative paths
-- Cross-runtime shared values come from `shared/`, for example `../../shared/modelConstants.js`
+**Path Aliases:**
+- No custom TypeScript path aliases were found
+- Imports are predominantly relative (`../`, `./`) or package imports
 
 ## Error Handling
 
 **Patterns:**
-- Server routes and service functions commonly use `try/catch` and respond with JSON errors instead of throwing uncaught exceptions
-- Frontend hooks and contexts log errors and often fail open to keep the UI usable
-- Validation happens near the boundary for paths, auth tokens, and request payloads
+- Server routes commonly use `try/catch` and respond with `{ error, details/message }` JSON, e.g. `server/routes/auth.js` and `server/routes/plugins.js`
+- WebSocket handlers catch per-message errors and emit error events back to the client from `server/index.js`
+- Frontend hooks often log and fail open rather than throwing, especially around auth, onboarding, push, and reconnect logic
 
-**Error types:**
-- Custom Error subclasses are not a dominant pattern
-- Most code uses plain `Error` objects plus structured JSON responses
-- Recoverable UI issues are often handled with `console.error` plus fallback state
+**Error Types:**
+- Plain `Error` objects and ad-hoc error payloads are the norm; there is no custom error-class hierarchy
+- Expected validation failures usually return HTTP 400/401/403/404 directly at the route boundary
+- Console logging with context is preferred over structured logger abstractions
 
 ## Logging
 
 **Framework:**
-- Logging is primarily `console.log`, `console.warn`, and `console.error`
-- Server startup code sometimes adds ANSI color helpers and tagged messages, for example in `server/index.js` and `server/database/db.js`
+- `console.log`, `console.warn`, and `console.error`
+- No dedicated logging library was found
 
 **Patterns:**
-- Logs are emitted at integration boundaries: provider execution, filesystem watchers, auth checks, route failures, and startup
-- Browser-side logs are used for network, auth, and WebSocket troubleshooting
+- Logs are common around provider invocation, startup, plugins, and filesystem/watcher behavior
+- Some debug logging is very verbose in `server/index.js`, especially around uploads and WebSocket/provider traffic
+- Client hooks also log recoverable failures instead of surfacing them all to the UI
 
 ## Comments
 
 **When to Comment:**
-- Comments usually explain why a workaround exists or what external constraint is being handled
-- Example: chokidar watcher setup and SDK/tool-approval behavior in `server/index.js` and `server/claude-sdk.js`
-- Obvious line-by-line comments are uncommon
+- Comments often explain operational intent or edge cases, especially in server orchestration code
+- Many comments are pragmatic and maintenance-focused, for example watcher behavior and reconnect reasoning in `server/index.js` and `src/components/chat/hooks/useChatRealtimeHandlers.ts`
 
-**JSDoc / TSDoc:**
-- Server modules use JSDoc heavily around exported helpers and route utilities
-- Frontend TSX code relies more on names and types than block comments
+**JSDoc/TSDoc:**
+- Public-ish server utilities and route helpers often use block comments/JSDoc-style descriptions
+- Frontend component files use lighter inline comments or no comments when the flow is straightforward
 
 **TODO Comments:**
 - TODO usage is sparse; one visible example is in `src/components/chat/tools/configs/toolConfigs.ts`
+- There is no enforced `TODO(owner)` pattern
 
 ## Function Design
 
 **Size:**
-- Small helper functions exist, but large orchestrator files are also common (`server/index.js`, `server/routes/taskmaster.js`, `server/routes/git.js`)
-- Complex UI state is often extracted into hooks/controllers rather than kept in the view file
+- Frontend hooks are split into focused responsibilities, but some orchestration files are large (`src/hooks/useProjectsState.ts`)
+- Backend functions can be large and procedural, especially in `server/index.js` and `server/routes/taskmaster.js`
 
 **Parameters:**
-- Multi-option flows often take a single options object, especially in provider adapters and hooks
-- Route helpers typically accept explicit scalar parameters for path/ref validation
+- Object parameter patterns are common in React hooks/components, especially for hook options and prop bags
+- Simpler helper functions still use positional parameters
 
 **Return Values:**
-- Early returns are common for guard clauses
-- Async flows usually return plain objects or Express responses rather than custom result wrappers
+- Guard clauses are common
+- REST helpers usually return raw `fetch` responses from `src/utils/api.js`
+- Server helpers frequently return plain objects rather than domain classes
 
 ## Module Design
 
 **Exports:**
-- Default exports are common for React components and some context modules
-- Named exports are preferred for utilities, hooks, constants, and server helpers
+- Default exports are common for React components and some singleton-style modules
+- Named exports are common for hooks, utilities, constants, and route helpers
 
-**Barrel files:**
-- Some features use `index.ts` for public exports, for example `src/components/auth/index.ts` and `src/shared/view/ui/index.ts`
-- Not every directory has a barrel; many imports target concrete files directly
-
-**Feature organization:**
-- UI code favors feature folders with `view/`, `hooks/`, `types/`, `utils/`, and `constants/`
-- Backend code favors responsibility-based folders such as `routes/`, `services/`, `middleware/`, and `utils/`
+**Barrel Files:**
+- Barrel `index.ts` files exist for selective public APIs, such as `src/components/auth/index.ts` and `src/shared/view/ui/index.ts`
+- Many feature folders are still imported directly from deep relative paths
 
 ---
 *Convention analysis: 2026-03-16*
