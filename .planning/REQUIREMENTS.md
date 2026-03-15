@@ -68,12 +68,32 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| INTE-01 | Phase 1 | Pending |
+| INTE-02 | Phase 1 | Pending |
+| INTE-03 | Phase 1 | Pending |
+| INTE-04 | Phase 2 | Pending |
+| INTE-05 | Phase 2 | Pending |
+| TERM-01 | Phase 2 | Pending |
+| TERM-02 | Phase 2 | Pending |
+| SESS-01 | Phase 3 | Pending |
+| SESS-02 | Phase 3 | Pending |
+| SESS-03 | Phase 3 | Pending |
+| SESS-04 | Phase 3 | Pending |
+| SESS-05 | Phase 3 | Pending |
+| SESS-06 | Phase 4 | Pending |
+| MOBL-01 | Phase 4 | Pending |
+| MOBL-02 | Phase 4 | Pending |
+| MOBL-03 | Phase 4 | Pending |
+| MOBL-04 | Phase 4 | Pending |
+| TERM-03 | Phase 5 | Pending |
+| TERM-04 | Phase 5 | Pending |
+| TERM-05 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-16*
-*Last updated: 2026-03-16 after initial definition*
+*Last updated: 2026-03-16 after roadmap creation*
