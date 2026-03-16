@@ -9,6 +9,8 @@ import PluginIcon from '../../../plugins/view/PluginIcon';
 type MainContentTabSwitcherProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
+  isTerminalPanelOpen: boolean;
+  onShellTrigger: () => void;
   shouldShowTasksTab: boolean;
 };
 
@@ -46,6 +48,8 @@ const TASKS_TAB: BuiltInTab = {
 export default function MainContentTabSwitcher({
   activeTab,
   setActiveTab,
+  isTerminalPanelOpen,
+  onShellTrigger,
   shouldShowTasksTab,
 }: MainContentTabSwitcherProps) {
   const { t } = useTranslation();
@@ -68,14 +72,22 @@ export default function MainContentTabSwitcher({
   return (
     <PillBar>
       {tabs.map((tab) => {
-        const isActive = tab.id === activeTab;
+        const isActive = tab.id === 'shell' ? isTerminalPanelOpen : tab.id === activeTab;
         const displayLabel = tab.kind === 'builtin' ? t(tab.labelKey) : tab.label;
+        const handleClick = () => {
+          if (tab.kind === 'builtin' && tab.id === 'shell') {
+            onShellTrigger();
+            return;
+          }
+
+          setActiveTab(tab.id);
+        };
 
         return (
           <Tooltip key={tab.id} content={displayLabel} position="bottom">
             <Pill
               isActive={isActive}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={handleClick}
               className="px-2.5 py-[5px]"
             >
               {tab.kind === 'builtin' ? (

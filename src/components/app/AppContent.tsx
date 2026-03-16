@@ -196,7 +196,9 @@ export default function AppContent() {
         <MobileNav
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          isTerminalPanelOpen={terminalPanelState.isOpen}
           isInputFocused={isInputFocused}
+          onShellTrigger={openTerminalPanel}
         />
       )}
 

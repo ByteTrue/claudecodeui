@@ -34,10 +34,18 @@ type CoreNavItem = {
 type MobileNavProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
+  isTerminalPanelOpen: boolean;
   isInputFocused: boolean;
+  onShellTrigger: () => void;
 };
 
-export default function MobileNav({ activeTab, setActiveTab, isInputFocused }: MobileNavProps) {
+export default function MobileNav({
+  activeTab,
+  setActiveTab,
+  isTerminalPanelOpen,
+  isInputFocused,
+  onShellTrigger,
+}: MobileNavProps) {
   const { t } = useTranslation(['common', 'settings']);
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings();
   const shouldShowTasksTab = Boolean(tasksEnabled && isTaskMasterInstalled);
@@ -88,15 +96,23 @@ export default function MobileNav({ activeTab, setActiveTab, isInputFocused }: M
         <div className="flex items-center justify-around gap-0.5 px-1 py-1.5">
           {coreItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = item.id === 'shell' ? isTerminalPanelOpen : activeTab === item.id;
+            const handleSelect = () => {
+              if (item.id === 'shell') {
+                onShellTrigger();
+                return;
+              }
+
+              setActiveTab(item.id);
+            };
 
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={handleSelect}
                 onTouchStart={(e) => {
                   e.preventDefault();
-                  setActiveTab(item.id);
+                  handleSelect();
                 }}
                 className={`relative flex flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 transition-all duration-200 active:scale-95 ${isActive
                   ? 'text-primary'

@@ -7,11 +7,13 @@ import MainContentTitle from './MainContentTitle';
 export default function MainContentHeader({
   activeTab,
   setActiveTab,
+  isTerminalPanelOpen,
   selectedProject,
   selectedSession,
   shouldShowTasksTab,
   isMobile,
   onMenuClick,
+  onShellTrigger,
 }: MainContentHeaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -58,6 +60,8 @@ export default function MainContentHeader({
             <MainContentTabSwitcher
               activeTab={activeTab}
               setActiveTab={setActiveTab}
+              isTerminalPanelOpen={isTerminalPanelOpen}
+              onShellTrigger={onShellTrigger}
               shouldShowTasksTab={shouldShowTasksTab}
             />
           </div>
