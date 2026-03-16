@@ -2,6 +2,12 @@ export type SessionProvider = 'claude' | 'cursor' | 'codex' | 'gemini';
 
 export type AppTab = 'chat' | 'files' | 'shell' | 'git' | 'tasks' | 'preview' | `plugin:${string}`;
 
+export interface TerminalPanelState {
+  isOpen: boolean;
+  height: number;
+  focusVersion: number;
+}
+
 export interface ProjectSession {
   id: string;
   title?: string;

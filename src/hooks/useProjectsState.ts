@@ -8,6 +8,7 @@ import type {
   Project,
   ProjectSession,
   ProjectsUpdatedMessage,
+  TerminalPanelState,
 } from '../types/app';
 
 type UseProjectsStateArgs = {
@@ -109,6 +110,12 @@ const isUpdateAdditive = (
 };
 
 const VALID_TABS: Set<string> = new Set(['chat', 'files', 'shell', 'git', 'tasks', 'preview']);
+const TERMINAL_PANEL_HEIGHT_STORAGE_KEY = 'terminalPanelHeight';
+const DEFAULT_TERMINAL_PANEL_HEIGHT = 320;
+
+const clampTerminalPanelHeight = (height: number): number => {
+  return Math.max(220, Math.min(height, 720));
+};
 
 const isValidTab = (tab: string): tab is AppTab => {
   return VALID_TABS.has(tab) || tab.startsWith('plugin:');
@@ -117,6 +124,10 @@ const isValidTab = (tab: string): tab is AppTab => {
 const readPersistedTab = (): AppTab => {
   try {
     const stored = localStorage.getItem('activeTab');
+    if (stored === 'shell') {
+      return 'chat';
+    }
+
     if (stored && isValidTab(stored)) {
       return stored as AppTab;
     }
@@ -124,6 +135,26 @@ const readPersistedTab = (): AppTab => {
     // localStorage unavailable
   }
   return 'chat';
+};
+
+const readPersistedTerminalPanelHeight = (): number => {
+  try {
+    const stored = localStorage.getItem(TERMINAL_PANEL_HEIGHT_STORAGE_KEY);
+    if (stored) {
+      const parsed = Number.parseInt(stored, 10);
+      if (!Number.isNaN(parsed)) {
+        return clampTerminalPanelHeight(parsed);
+      }
+    }
+  } catch {
+    // localStorage unavailable
+  }
+
+  if (typeof window !== 'undefined') {
+    return clampTerminalPanelHeight(Math.round(window.innerHeight / 3));
+  }
+
+  return DEFAULT_TERMINAL_PANEL_HEIGHT;
 };
 
 export function useProjectsState({
@@ -137,6 +168,11 @@ export function useProjectsState({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedSession, setSelectedSession] = useState<ProjectSession | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>(readPersistedTab);
+  const [terminalPanelState, setTerminalPanelState] = useState<TerminalPanelState>({
+    isOpen: false,
+    height: readPersistedTerminalPanelHeight(),
+    focusVersion: 0,
+  });
 
   useEffect(() => {
     try {
@@ -145,6 +181,14 @@ export function useProjectsState({
       // Silently ignore storage errors
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TERMINAL_PANEL_HEIGHT_STORAGE_KEY, String(terminalPanelState.height));
+    } catch {
+      // Silently ignore storage errors
+    }
+  }, [terminalPanelState.height]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
@@ -186,6 +230,28 @@ export function useProjectsState({
     // Keep chat view stable while still syncing sidebar/session metadata in background.
     await fetchProjects({ showLoadingState: false });
   }, [fetchProjects]);
+
+  const openTerminalPanel = useCallback(() => {
+    setTerminalPanelState((previous) => ({
+      ...previous,
+      isOpen: true,
+      focusVersion: previous.focusVersion + 1,
+    }));
+  }, []);
+
+  const closeTerminalPanel = useCallback(() => {
+    setTerminalPanelState((previous) => ({
+      ...previous,
+      isOpen: false,
+    }));
+  }, []);
+
+  const setTerminalPanelHeight = useCallback((height: number) => {
+    setTerminalPanelState((previous) => ({
+      ...previous,
+      height: clampTerminalPanelHeight(height),
+    }));
+  }, []);
 
   const openSettings = useCallback((tab = 'tools') => {
     setSettingsInitialTab(tab);
@@ -547,6 +613,7 @@ export function useProjectsState({
     selectedProject,
     selectedSession,
     activeTab,
+    terminalPanelState,
     sidebarOpen,
     isLoadingProjects,
     loadingProgress,
@@ -558,6 +625,9 @@ export function useProjectsState({
     setSidebarOpen,
     setIsInputFocused,
     setShowSettings,
+    openTerminalPanel,
+    closeTerminalPanel,
+    setTerminalPanelHeight,
     openSettings,
     fetchProjects,
     refreshProjectsSilently,

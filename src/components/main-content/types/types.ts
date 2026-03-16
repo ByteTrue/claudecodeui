@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { AppTab, Project, ProjectSession } from '../../../types/app';
+import type { AppTab, Project, ProjectSession, TerminalPanelState } from '../../../types/app';
 
 export type SessionLifecycleHandler = (sessionId?: string | null) => void;
 
@@ -37,11 +37,15 @@ export type MainContentProps = {
   selectedSession: ProjectSession | null;
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
+  terminalPanelState: TerminalPanelState;
   ws: WebSocket | null;
   sendMessage: (message: unknown) => void;
   latestMessage: unknown;
   isMobile: boolean;
   onMenuClick: () => void;
+  onOpenTerminalPanel: () => void;
+  onCloseTerminalPanel: () => void;
+  onTerminalPanelHeightChange: (height: number) => void;
   isLoading: boolean;
   onInputFocusChange: (focused: boolean) => void;
   onSessionActive: SessionLifecycleHandler;
@@ -58,11 +62,13 @@ export type MainContentProps = {
 export type MainContentHeaderProps = {
   activeTab: AppTab;
   setActiveTab: Dispatch<SetStateAction<AppTab>>;
+  isTerminalPanelOpen: boolean;
   selectedProject: Project;
   selectedSession: ProjectSession | null;
   shouldShowTasksTab: boolean;
   isMobile: boolean;
   onMenuClick: () => void;
+  onShellTrigger: () => void;
 };
 
 export type MainContentStateViewProps = {
