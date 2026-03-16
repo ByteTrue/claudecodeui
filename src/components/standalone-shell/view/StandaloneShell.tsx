@@ -16,6 +16,7 @@ type StandaloneShellProps = {
   title?: string | null;
   className?: string;
   showHeader?: boolean;
+  showShellHeader?: boolean;
   compact?: boolean;
   minimal?: boolean;
 };
@@ -32,6 +33,7 @@ export default function StandaloneShell({
   title = null,
   className = '',
   showHeader = true,
+  showShellHeader = true,
   compact = false,
   minimal = false,
 }: StandaloneShellProps) {
@@ -66,6 +68,7 @@ export default function StandaloneShell({
           selectedSession={session}
           initialCommand={command}
           isPlainShell={shouldUsePlainShell}
+          showHeader={showShellHeader}
           isActive={isActive}
           onProcessComplete={handleProcessComplete}
           minimal={minimal}
