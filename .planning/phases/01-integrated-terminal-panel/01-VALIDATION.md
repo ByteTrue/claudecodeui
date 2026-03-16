@@ -40,10 +40,13 @@ created: 2026-03-16
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
 | 01-01-01 | 01 | 1 | INTE-01 | static + manual | `npm run lint` | ✅ | ⬜ pending |
 | 01-01-02 | 01 | 1 | INTE-01 | static + manual | `npm run lint` | ✅ | ⬜ pending |
-| 01-02-01 | 02 | 2 | INTE-02 | static + manual | `npm run lint` | ✅ | ⬜ pending |
+| 01-01-03 | 01 | 1 | INTE-01 | static + manual | `npm run lint` | ✅ | ⬜ pending |
+| 01-02-01 | 02 | 2 | INTE-01 | static + manual | `npm run lint` | ✅ | ⬜ pending |
 | 01-02-02 | 02 | 2 | INTE-02 | static + manual | `npm run lint` | ✅ | ⬜ pending |
+| 01-02-03 | 02 | 2 | INTE-02 | static + manual | `npm run lint` | ✅ | ⬜ pending |
 | 01-03-01 | 03 | 3 | INTE-03 | static + manual | `npm run lint` | ✅ | ⬜ pending |
-| 01-03-02 | 03 | 3 | INTE-03 | static + manual | `npm run lint && npm run typecheck` | ✅ | ⬜ pending |
+| 01-03-02 | 03 | 3 | INTE-03 | static + manual | `npm run lint` | ✅ | ⬜ pending |
+| 01-03-03 | 03 | 3 | INTE-03 | static + manual | `npm run lint && npm run typecheck` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -75,4 +78,3 @@ Existing infrastructure covers all phase requirements.
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** approved 2026-03-16
-
