@@ -31,6 +31,7 @@ export default function AppContent() {
     selectedProject,
     selectedSession,
     activeTab,
+    terminalPanelState,
     sidebarOpen,
     isLoadingProjects,
     isInputFocused,
@@ -39,6 +40,9 @@ export default function AppContent() {
     setSidebarOpen,
     setIsInputFocused,
     setShowSettings,
+    openTerminalPanel,
+    closeTerminalPanel,
+    setTerminalPanelHeight,
     openSettings,
     refreshProjectsSilently,
     sidebarSharedProps,
@@ -165,11 +169,15 @@ export default function AppContent() {
           selectedSession={selectedSession}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          terminalPanelState={terminalPanelState}
           ws={ws}
           sendMessage={sendMessage}
           latestMessage={latestMessage}
           isMobile={isMobile}
           onMenuClick={() => setSidebarOpen(true)}
+          onOpenTerminalPanel={openTerminalPanel}
+          onCloseTerminalPanel={closeTerminalPanel}
+          onTerminalPanelHeightChange={setTerminalPanelHeight}
           isLoading={isLoadingProjects}
           onInputFocusChange={setIsInputFocused}
           onSessionActive={markSessionAsActive}
