@@ -80,7 +80,8 @@ export function useShellTerminal({
   }, [fitAddonRef, terminalRef]);
 
   useEffect(() => {
-    if (!terminalContainerRef.current || !hasSelectedProject || isRestarting || terminalRef.current) {
+    const terminalContainer = terminalContainerRef.current;
+    if (!terminalContainer || !hasSelectedProject || isRestarting || terminalRef.current) {
       return;
     }
 
@@ -102,7 +103,7 @@ export function useShellTerminal({
       console.warn('[Shell] WebGL renderer unavailable, using Canvas fallback');
     }
 
-    nextTerminal.open(terminalContainerRef.current);
+    nextTerminal.open(terminalContainer);
 
     const copyTerminalSelection = async () => {
       const selection = nextTerminal.getSelection();
@@ -133,7 +134,7 @@ export function useShellTerminal({
       void copyTextToClipboard(selection);
     };
 
-    terminalContainerRef.current.addEventListener('copy', handleTerminalCopy);
+    terminalContainer.addEventListener('copy', handleTerminalCopy);
 
     nextTerminal.attachCustomKeyEventHandler((event) => {
       const activeAuthUrl = isCodexLoginCommand(initialCommandRef.current)
@@ -240,10 +241,10 @@ export function useShellTerminal({
       }, TERMINAL_RESIZE_DELAY_MS);
     });
 
-    resizeObserver.observe(terminalContainerRef.current);
+    resizeObserver.observe(terminalContainer);
 
     return () => {
-      terminalContainerRef.current?.removeEventListener('copy', handleTerminalCopy);
+      terminalContainer.removeEventListener('copy', handleTerminalCopy);
       resizeObserver.disconnect();
       if (resizeTimeoutRef.current !== null) {
         window.clearTimeout(resizeTimeoutRef.current);
