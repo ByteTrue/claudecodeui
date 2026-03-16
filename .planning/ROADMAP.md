@@ -6,7 +6,7 @@ This roadmap turns the existing shell infrastructure into a workspace-native ter
 
 ## Phases
 
-- [ ] **Phase 1: Integrated Terminal Panel** - Add a bottom-panel terminal that feels native to the existing workspace layout
+- [x] **Phase 1: Integrated Terminal Panel** - Add a bottom-panel terminal that feels native to the existing workspace layout (completed 2026-03-16)
 - [ ] **Phase 2: Project-Aware Terminal Launch** - Make integrated terminals launch and behave in the current project context
 - [ ] **Phase 3: Multi-Session Terminal Tabs** - Add tabbed terminal sessions with explicit lifecycle and status handling
 - [ ] **Phase 4: Mobile And Workflow Continuity** - Preserve terminal state during normal app use and make the feature core-usable on mobile
@@ -25,9 +25,9 @@ This roadmap turns the existing shell infrastructure into a workspace-native ter
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Embed the terminal panel container and controls into the main workspace layout
-- [ ] 01-02: Wire panel open/close behavior to the existing shell surface without breaking current navigation
-- [ ] 01-03: Implement desktop resize behavior and visual integration polish for the panel
+- [x] 01-01: Embed the terminal panel container and controls into the main workspace layout
+- [x] 01-02: Wire panel open/close behavior to the existing shell surface without breaking current navigation
+- [x] 01-03: Implement desktop resize behavior and visual integration polish for the panel
 
 ### Phase 2: Project-Aware Terminal Launch
 **Goal**: Integrated terminals launch in the correct project context and behave reliably as live terminals.
@@ -94,7 +94,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Integrated Terminal Panel | 0/3 | Not started | - |
+| 1. Integrated Terminal Panel | 3/3 | Complete   | 2026-03-16 |
 | 2. Project-Aware Terminal Launch | 0/2 | Not started | - |
 | 3. Multi-Session Terminal Tabs | 0/3 | Not started | - |
 | 4. Mobile And Workflow Continuity | 0/3 | Not started | - |

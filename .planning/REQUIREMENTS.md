@@ -7,9 +7,9 @@
 
 ### Workspace Integration
 
-- [ ] **INTE-01**: User can open the integrated terminal from the current workspace UI
-- [ ] **INTE-02**: User can collapse and reopen the terminal panel without losing current workspace context
-- [ ] **INTE-03**: User can resize the terminal panel on desktop to allocate more or less vertical space
+- [x] **INTE-01**: User can open the integrated terminal from the current workspace UI
+- [x] **INTE-02**: User can collapse and reopen the terminal panel without losing current workspace context
+- [x] **INTE-03**: User can resize the terminal panel on desktop to allocate more or less vertical space
 - [ ] **INTE-04**: New terminal tabs start in the current project/workspace root by default
 - [ ] **INTE-05**: User can clearly tell which project/workspace a terminal tab belongs to
 
@@ -68,9 +68,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INTE-01 | Phase 1 | Pending |
-| INTE-02 | Phase 1 | Pending |
-| INTE-03 | Phase 1 | Pending |
+| INTE-01 | Phase 1 | Complete |
+| INTE-02 | Phase 1 | Complete |
+| INTE-03 | Phase 1 | Complete |
 | INTE-04 | Phase 2 | Pending |
 | INTE-05 | Phase 2 | Pending |
 | TERM-01 | Phase 2 | Pending |
@@ -96,4 +96,4 @@
 
 ---
 *Requirements defined: 2026-03-16*
-*Last updated: 2026-03-16 after roadmap creation*
+*Last updated: 2026-03-16 after Phase 1 completion*

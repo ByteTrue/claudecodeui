@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-03-16T14:16:22.466Z"
-last_activity: 2026-03-16 — Created project context, research, requirements, and roadmap for integrated terminal work
+stopped_at: Phase 1 verified complete
+last_updated: "2026-03-16T17:14:48.595Z"
+last_activity: 2026-03-16 — Executed Phase 1 plans and verified integrated terminal panel behavior
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -21,32 +21,32 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Users should be able to do their normal project work inside the app without breaking flow or leaving to a separate terminal window.
-**Current focus:** Phase 1 - Integrated Terminal Panel
+**Current focus:** Phase 2 - Project-Aware Terminal Launch
 
 ## Current Position
 
-Phase: 1 of 5 (Integrated Terminal Panel)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-03-16 — Created project context, research, requirements, and roadmap for integrated terminal work
+Phase: 2 of 5 (Project-Aware Terminal Launch)
+Plan: 0 of 2 in current phase
+Status: Phase 1 complete, ready to plan next phase
+Last activity: 2026-03-16 — Executed Phase 1 plans and verified integrated terminal panel behavior
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0.0 hours
+- Total plans completed: 3
+- Average duration: 7 min
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 3 | 22 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: -
+- Last 5 plans: 19 min, 1 min, 2 min
 - Trend: Stable
 
 ## Accumulated Context
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - [Initialization]: Default terminal launch to the selected project/workspace root
 - [Initialization]: Include multi-session tab switching in v1
 - [Initialization]: Treat mobile usability as first-version scope
+- [Phase 1]: Terminal panel state lives outside `activeTab`
+- [Phase 1]: Existing shell controls now open/focus the bottom panel instead of routing to a shell page
+- [Phase 1]: Desktop terminal resize uses an explicit grab handle and remembers the last chosen height
 
 ### Pending Todos
 
@@ -67,11 +70,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Existing shell infrastructure already exists, so new work must extend current lifecycle safely rather than replace it
 - Mobile keyboard and viewport behavior may force UI compromises during implementation
+- Phase 2 still needs to bind default cwd/project identity and verify live shell behavior in the integrated panel path
 
 ## Session Continuity
 
-Last session: 2026-03-16T14:16:22.464Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-integrated-terminal-panel/01-CONTEXT.md
+Last session: 2026-03-16T17:14:48.593Z
+Stopped at: Phase 1 verified complete
+Resume file: None
