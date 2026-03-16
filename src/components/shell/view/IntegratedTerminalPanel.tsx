@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Project, ProjectSession } from '../../../types/app';
@@ -10,7 +10,9 @@ type IntegratedTerminalPanelProps = {
   isOpen: boolean;
   focusVersion: number;
   height: number;
+  isMobile: boolean;
   onClose: () => void;
+  onHeightChange: (height: number) => void;
 };
 
 export default function IntegratedTerminalPanel({
@@ -19,10 +21,13 @@ export default function IntegratedTerminalPanel({
   isOpen,
   focusVersion,
   height,
+  isMobile,
   onClose,
+  onHeightChange,
 }: IntegratedTerminalPanelProps) {
   const { t } = useTranslation(['common', 'chat']);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
 
   const title = useMemo(() => t('tabs.shell'), [t]);
 
@@ -47,6 +52,42 @@ export default function IntegratedTerminalPanel({
     };
   }, [focusVersion, isOpen]);
 
+  useEffect(() => {
+    if (!isResizing || isMobile) {
+      return;
+    }
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const workspaceContainer = panelRef.current?.parentElement;
+      if (!workspaceContainer) {
+        return;
+      }
+
+      const containerRect = workspaceContainer.getBoundingClientRect();
+      const minHeight = 220;
+      const maxHeight = Math.max(minHeight, containerRect.height - 140);
+      const nextHeight = containerRect.bottom - event.clientY;
+
+      onHeightChange(Math.round(Math.max(minHeight, Math.min(maxHeight, nextHeight))));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isMobile, isResizing, onHeightChange]);
+
   if (!project || !isOpen) {
     return null;
   }
@@ -57,6 +98,19 @@ export default function IntegratedTerminalPanel({
       className="border-border/60 bg-card/95 flex-shrink-0 overflow-hidden border-t shadow-[0_-10px_35px_rgba(15,23,42,0.18)] backdrop-blur-sm"
       style={{ height }}
     >
+      {!isMobile && (
+        <div
+          onMouseDown={(event) => {
+            event.preventDefault();
+            setIsResizing(true);
+          }}
+          className="group bg-border/40 hover:bg-primary/60 h-1 cursor-row-resize transition-colors"
+          title="Drag to resize terminal"
+        >
+          <div className="mx-auto mt-0.5 h-[2px] w-12 rounded-full bg-muted-foreground/50 transition-colors group-hover:bg-primary-foreground/80" />
+        </div>
+      )}
+
       <div className="border-border/50 flex items-center justify-between border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="bg-primary/10 text-primary flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md">
@@ -72,14 +126,14 @@ export default function IntegratedTerminalPanel({
           type="button"
           onClick={onClose}
           className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors"
-          title={t('chat:shell.actions.disconnectTitle', { defaultValue: 'Hide terminal panel' })}
+          title="Hide terminal panel"
         >
           <ChevronDown className="h-4 w-4" />
           <span className="hidden sm:inline">Hide</span>
         </button>
       </div>
 
-      <div className="min-h-0 h-[calc(100%-45px)]">
+      <div className="h-[calc(100%-49px)] min-h-0">
         <StandaloneShell
           project={project}
           session={session}

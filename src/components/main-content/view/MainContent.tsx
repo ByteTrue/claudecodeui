@@ -40,6 +40,7 @@ function MainContent({
   onMenuClick,
   onOpenTerminalPanel,
   onCloseTerminalPanel,
+  onTerminalPanelHeightChange,
   isLoading,
   onInputFocusChange,
   onSessionActive,
@@ -192,7 +193,9 @@ function MainContent({
           isOpen={terminalPanelState.isOpen}
           focusVersion={terminalPanelState.focusVersion}
           height={terminalPanelState.height}
+          isMobile={isMobile}
           onClose={onCloseTerminalPanel}
+          onHeightChange={onTerminalPanelHeightChange}
         />
       </div>
     </div>
