@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import ChatInterface from '../../chat/view/ChatInterface';
 import FileTree from '../../file-tree/view/FileTree';
 import GitPanel from '../../git-panel/view/GitPanel';
@@ -9,12 +9,12 @@ import { useTasksSettings } from '../../../contexts/TasksSettingsContext';
 import { useUiPreferences } from '../../../hooks/useUiPreferences';
 import { useEditorSidebar } from '../../code-editor/hooks/useEditorSidebar';
 import EditorSidebar from '../../code-editor/view/EditorSidebar';
-import type { Project } from '../../../types/app';
+import type { Project, ProjectSession } from '../../../types/app';
 import { TaskMasterPanel } from '../../task-master';
+import IntegratedTerminalPanel from '../../shell/view/IntegratedTerminalPanel';
 import MainContentHeader from './subcomponents/MainContentHeader';
 import MainContentStateView from './subcomponents/MainContentStateView';
 import ErrorBoundary from './ErrorBoundary';
-import IntegratedTerminalPanel from '../../shell/view/IntegratedTerminalPanel';
 
 type TaskMasterContextValue = {
   currentProject?: Project | null;
@@ -27,7 +27,17 @@ type TasksSettingsContextValue = {
   isTaskMasterReady: boolean | null;
 };
 
+const getProjectSessions = (project: Project): ProjectSession[] => {
+  return [
+    ...(project.sessions ?? []),
+    ...(project.codexSessions ?? []),
+    ...(project.cursorSessions ?? []),
+    ...(project.geminiSessions ?? []),
+  ];
+};
+
 function MainContent({
+  projects,
   selectedProject,
   selectedSession,
   activeTab,
@@ -60,6 +70,35 @@ function MainContent({
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings() as TasksSettingsContextValue;
 
   const shouldShowTasksTab = Boolean(tasksEnabled && isTaskMasterInstalled);
+  const terminalBinding = terminalPanelState.binding;
+  const boundProject = useMemo(() => {
+    if (!terminalBinding) {
+      return null;
+    }
+
+    return projects.find((project) => project.name === terminalBinding.projectName) ?? {
+      name: terminalBinding.projectName,
+      displayName: terminalBinding.projectDisplayName,
+      fullPath: terminalBinding.projectPath,
+      path: terminalBinding.projectPath,
+    };
+  }, [projects, terminalBinding]);
+  const boundSession = useMemo(() => {
+    if (!terminalBinding?.sessionId) {
+      return null;
+    }
+
+    const projectSession = boundProject
+      ? getProjectSessions(boundProject).find((session) => session.id === terminalBinding.sessionId)
+      : null;
+
+    return projectSession
+      ? { ...projectSession, __provider: projectSession.__provider || terminalBinding.provider }
+      : {
+          id: terminalBinding.sessionId,
+          __provider: terminalBinding.provider,
+        };
+  }, [boundProject, terminalBinding]);
 
   const {
     editingFile,
