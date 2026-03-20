@@ -230,6 +230,11 @@
     },
     "loading": "Loading terminal...",
     "connecting": "Connecting to shell...",
+    "header": {
+      "live": "Live",
+      "disconnected": "Disconnected",
+      "viewingProject": "Viewing {{projectName}}"
+    },
     "startSession": "Start a new Claude session",
     "resumeSession": "Resume session: {{displayName}}...",
     "runCommand": "Run {{command}} in {{projectName}}",

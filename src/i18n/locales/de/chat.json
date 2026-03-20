@@ -230,6 +230,11 @@
     },
     "loading": "Terminal wird geladen...",
     "connecting": "Verbindung zum Terminal wird hergestellt...",
+    "header": {
+      "live": "Live",
+      "disconnected": "Getrennt",
+      "viewingProject": "{{projectName}} wird angezeigt"
+    },
     "startSession": "Neue Claude-Sitzung starten",
     "resumeSession": "Sitzung fortsetzen: {{displayName}}...",
     "runCommand": "{{command}} in {{projectName}} ausführen",

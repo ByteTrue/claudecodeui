@@ -230,6 +230,11 @@
     },
     "loading": "Загрузка терминала...",
     "connecting": "Подключение к оболочке...",
+    "header": {
+      "live": "Активно",
+      "disconnected": "Отключено",
+      "viewingProject": "Просмотр: {{projectName}}"
+    },
     "startSession": "Начать новый сеанс Claude",
     "resumeSession": "Возобновить сеанс: {{displayName}}...",
     "runCommand": "Выполнить {{command}} в {{projectName}}",
