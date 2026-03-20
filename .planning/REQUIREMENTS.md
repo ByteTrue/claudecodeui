@@ -11,7 +11,7 @@
 - [x] **INTE-02**: User can collapse and reopen the terminal panel without losing current workspace context
 - [x] **INTE-03**: User can resize the terminal panel on desktop to allocate more or less vertical space
 - [x] **INTE-04**: New terminal tabs start in the current project/workspace root by default
-- [ ] **INTE-05**: User can clearly tell which project/workspace a terminal tab belongs to
+- [x] **INTE-05**: User can clearly tell which project/workspace a terminal tab belongs to
 
 ### Sessions
 
@@ -25,7 +25,7 @@
 ### Terminal Operation
 
 - [x] **TERM-01**: User can type commands into the integrated terminal and receive real-time output
-- [ ] **TERM-02**: Terminal output and prompt layout remain correct when the panel size changes
+- [x] **TERM-02**: Terminal output and prompt layout remain correct when the panel size changes
 - [ ] **TERM-03**: User can copy from and paste into the integrated terminal
 - [ ] **TERM-04**: User can open URL-like links emitted in terminal output through an intentional UI interaction
 - [ ] **TERM-05**: User receives visible feedback and a recovery path when the terminal transport disconnects unexpectedly
@@ -72,9 +72,9 @@
 | INTE-02 | Phase 1 | Complete |
 | INTE-03 | Phase 1 | Complete |
 | INTE-04 | Phase 2 | Complete |
-| INTE-05 | Phase 2 | Pending |
+| INTE-05 | Phase 2 | Complete |
 | TERM-01 | Phase 2 | Complete |
-| TERM-02 | Phase 2 | Pending |
+| TERM-02 | Phase 2 | Complete |
 | SESS-01 | Phase 3 | Pending |
 | SESS-02 | Phase 3 | Pending |
 | SESS-03 | Phase 3 | Pending |
@@ -96,4 +96,4 @@
 
 ---
 *Requirements defined: 2026-03-16*
-*Last updated: 2026-03-20 after Phase 2 Plan 01 completion*
+*Last updated: 2026-03-20 after Phase 2 Plan 02 completion*
