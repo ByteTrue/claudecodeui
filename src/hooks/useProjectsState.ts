@@ -8,6 +8,7 @@ import type {
   Project,
   ProjectSession,
   ProjectsUpdatedMessage,
+  SessionProvider,
   TerminalPanelState,
 } from '../types/app';
 
@@ -117,6 +118,19 @@ const clampTerminalPanelHeight = (height: number): number => {
   return Math.max(220, Math.min(height, 720));
 };
 
+const isSessionProvider = (value: string | null): value is SessionProvider => {
+  return value === 'claude' || value === 'cursor' || value === 'codex' || value === 'gemini';
+};
+
+const readPersistedProvider = (): SessionProvider => {
+  try {
+    const stored = localStorage.getItem('selected-provider');
+    return isSessionProvider(stored) ? stored : 'claude';
+  } catch {
+    return 'claude';
+  }
+};
+
 const isValidTab = (tab: string): tab is AppTab => {
   return VALID_TABS.has(tab) || tab.startsWith('plugin:');
 };
@@ -172,6 +186,7 @@ export function useProjectsState({
     isOpen: false,
     height: readPersistedTerminalPanelHeight(),
     focusVersion: 0,
+    binding: null,
   });
 
   useEffect(() => {
@@ -236,13 +251,23 @@ export function useProjectsState({
       ...previous,
       isOpen: true,
       focusVersion: previous.focusVersion + 1,
+      binding: previous.binding ?? (selectedProject
+        ? {
+            projectName: selectedProject.name,
+            projectDisplayName: selectedProject.displayName,
+            projectPath: selectedProject.fullPath || selectedProject.path || '',
+            sessionId: selectedSession?.id || null,
+            provider: selectedSession?.__provider || readPersistedProvider(),
+          }
+        : null),
     }));
-  }, []);
+  }, [selectedProject, selectedSession]);
 
   const closeTerminalPanel = useCallback(() => {
     setTerminalPanelState((previous) => ({
       ...previous,
       isOpen: false,
+      binding: previous.binding,
     }));
   }, []);
 

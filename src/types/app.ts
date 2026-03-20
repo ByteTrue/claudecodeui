@@ -2,10 +2,19 @@ export type SessionProvider = 'claude' | 'cursor' | 'codex' | 'gemini';
 
 export type AppTab = 'chat' | 'files' | 'shell' | 'git' | 'tasks' | 'preview' | `plugin:${string}`;
 
+export interface TerminalBindingContext {
+  projectName: string;
+  projectDisplayName: string;
+  projectPath: string;
+  sessionId: string | null;
+  provider: SessionProvider;
+}
+
 export interface TerminalPanelState {
   isOpen: boolean;
   height: number;
   focusVersion: number;
+  binding: TerminalBindingContext | null;
 }
 
 export interface ProjectSession {
