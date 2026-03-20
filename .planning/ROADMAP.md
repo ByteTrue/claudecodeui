@@ -41,7 +41,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Bind terminal creation and shell initialization to the selected project/workspace context
+- [x] 02-01: Bind terminal creation and shell initialization to the selected project/workspace context
 - [ ] 02-02: Surface project identity in the terminal UI and stabilize integrated terminal fit/output behavior
 
 ### Phase 3: Multi-Session Terminal Tabs
@@ -95,7 +95,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Integrated Terminal Panel | 3/3 | Complete   | 2026-03-16 |
-| 2. Project-Aware Terminal Launch | 0/2 | Not started | - |
+| 2. Project-Aware Terminal Launch | 1/2 | In Progress | - |
 | 3. Multi-Session Terminal Tabs | 0/3 | Not started | - |
 | 4. Mobile And Workflow Continuity | 0/3 | Not started | - |
 | 5. Terminal Hardening And Recovery | 0/2 | Not started | - |
