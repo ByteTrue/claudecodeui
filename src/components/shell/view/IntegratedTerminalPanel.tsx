@@ -101,7 +101,7 @@ export default function IntegratedTerminalPanel({
   return (
     <div
       ref={panelRef}
-      className="border-border/60 bg-card/95 flex-shrink-0 overflow-hidden border-t shadow-[0_-10px_35px_rgba(15,23,42,0.18)] backdrop-blur-sm"
+      className="flex-shrink-0 overflow-hidden border-t border-border/60 bg-card/95 shadow-[0_-10px_35px_rgba(15,23,42,0.18)] backdrop-blur-sm"
       style={{ height }}
     >
       {!isMobile && (
@@ -110,16 +110,16 @@ export default function IntegratedTerminalPanel({
             event.preventDefault();
             setIsResizing(true);
           }}
-          className="group bg-border/40 hover:bg-primary/60 h-1 cursor-row-resize transition-colors"
+          className="group h-1 cursor-row-resize bg-border/40 transition-colors hover:bg-primary/60"
           title="Drag to resize terminal"
         >
           <div className="mx-auto mt-0.5 h-[2px] w-12 rounded-full bg-muted-foreground/50 transition-colors group-hover:bg-primary-foreground/80" />
         </div>
       )}
 
-      <div className="border-border/50 flex items-center justify-between border-b px-3 py-2">
+      <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="bg-primary/10 text-primary flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <Terminal className="h-4 w-4" />
           </div>
           <div className="min-w-0">
@@ -131,7 +131,7 @@ export default function IntegratedTerminalPanel({
         <button
           type="button"
           onClick={onClose}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors"
+          className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           title="Hide terminal panel"
         >
           <ChevronDown className="h-4 w-4" />
