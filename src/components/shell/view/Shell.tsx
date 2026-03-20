@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@xterm/xterm/css/xterm.css';
 import type { Project, ProjectSession } from '../../../types/app';
+import type { ShellStatusSnapshot } from '../types/types';
 import {
   PROMPT_BUFFER_SCAN_LINES,
   PROMPT_DEBOUNCE_MS,
@@ -31,6 +32,7 @@ type ShellProps = {
   minimal?: boolean;
   autoConnect?: boolean;
   isActive?: boolean;
+  onStatusChange?: ((status: ShellStatusSnapshot) => void) | null;
 };
 
 export default function Shell({
@@ -43,6 +45,7 @@ export default function Shell({
   minimal = false,
   autoConnect = false,
   isActive = true,
+  onStatusChange = null,
 }: ShellProps) {
   const { t } = useTranslation('chat');
   const [isRestarting, setIsRestarting] = useState(false);
@@ -197,6 +200,18 @@ export default function Shell({
       setIsRestarting(false);
     }, SHELL_RESTART_DELAY_MS);
   }, []);
+
+  const shellStatus = useMemo<ShellStatusSnapshot>(
+    () => ({
+      phase: !isInitialized ? 'loading' : isConnecting ? 'connecting' : isConnected ? 'live' : 'disconnected',
+      canRetry: isInitialized && !isConnecting && !isConnected,
+    }),
+    [isConnected, isConnecting, isInitialized],
+  );
+
+  useEffect(() => {
+    onStatusChange?.(shellStatus);
+  }, [onStatusChange, shellStatus]);
 
   if (!selectedProject) {
     return (

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { Project, ProjectSession } from '../../../types/app';
 import Shell from '../../shell/view/Shell';
+import type { ShellStatusSnapshot } from '../../shell/types/types';
 import StandaloneShellEmptyState from './subcomponents/StandaloneShellEmptyState';
 import StandaloneShellHeader from './subcomponents/StandaloneShellHeader';
 
@@ -19,6 +20,7 @@ type StandaloneShellProps = {
   showShellHeader?: boolean;
   compact?: boolean;
   minimal?: boolean;
+  onStatusChange?: ((status: ShellStatusSnapshot) => void) | null;
 };
 
 export default function StandaloneShell({
@@ -36,6 +38,7 @@ export default function StandaloneShell({
   showShellHeader = true,
   compact = false,
   minimal = false,
+  onStatusChange = null,
 }: StandaloneShellProps) {
   const [isCompleted, setIsCompleted] = useState(false);
 
@@ -73,6 +76,7 @@ export default function StandaloneShell({
           onProcessComplete={handleProcessComplete}
           minimal={minimal}
           autoConnect={minimal ? true : autoConnect}
+          onStatusChange={onStatusChange}
         />
       </div>
     </div>

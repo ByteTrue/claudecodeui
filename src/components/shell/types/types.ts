@@ -4,6 +4,12 @@ import type { Terminal } from '@xterm/xterm';
 import type { Project, ProjectSession } from '../../../types/app';
 
 export type AuthCopyStatus = 'idle' | 'copied' | 'failed';
+export type ShellStatusPhase = 'loading' | 'connecting' | 'live' | 'disconnected';
+
+export type ShellStatusSnapshot = {
+  phase: ShellStatusPhase;
+  canRetry: boolean;
+};
 
 export type ShellInitMessage = {
   type: 'init';
