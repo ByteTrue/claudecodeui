@@ -147,7 +147,7 @@ export default function IntegratedTerminalPanel({
   return (
     <div
       ref={panelRef}
-      className="flex-shrink-0 overflow-hidden border-t border-border/60 bg-card/95 shadow-[0_-10px_35px_rgba(15,23,42,0.18)] backdrop-blur-sm"
+      className="flex flex-shrink-0 flex-col overflow-hidden border-t border-border/60 bg-card/95 shadow-[0_-10px_35px_rgba(15,23,42,0.18)] backdrop-blur-sm"
       style={{ height }}
     >
       {!isMobile && (
@@ -205,14 +205,14 @@ export default function IntegratedTerminalPanel({
         </button>
       </div>
 
-      <div className="h-[calc(100%-49px)] min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         <StandaloneShell
           project={boundProject}
           session={boundSession}
           showHeader={false}
           showShellHeader={false}
           isActive={isOpen}
-          className="h-full"
+          className="h-full min-h-0"
           onStatusChange={setShellStatus}
         />
       </div>
