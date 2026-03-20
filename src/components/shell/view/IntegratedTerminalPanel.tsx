@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { Project, ProjectSession } from '../../../types/app';
+import type { Project, ProjectSession, TerminalBindingContext } from '../../../types/app';
 import StandaloneShell from '../../standalone-shell/view/StandaloneShell';
 
 type IntegratedTerminalPanelProps = {
-  project: Project | null;
-  session: ProjectSession | null;
+  currentProject: Project | null;
+  terminalBinding: TerminalBindingContext | null;
+  boundProject: Project | null;
+  boundSession: ProjectSession | null;
   isOpen: boolean;
   focusVersion: number;
   height: number;
@@ -16,8 +18,10 @@ type IntegratedTerminalPanelProps = {
 };
 
 export default function IntegratedTerminalPanel({
-  project,
-  session,
+  currentProject,
+  terminalBinding,
+  boundProject,
+  boundSession,
   isOpen,
   focusVersion,
   height,
@@ -30,6 +34,8 @@ export default function IntegratedTerminalPanel({
   const [isResizing, setIsResizing] = useState(false);
 
   const title = useMemo(() => t('tabs.shell'), [t]);
+  const displayProject = boundProject ?? currentProject;
+  const projectDisplayName = terminalBinding?.projectDisplayName || displayProject?.displayName || '';
 
   useEffect(() => {
     if (!isOpen) {
@@ -88,7 +94,7 @@ export default function IntegratedTerminalPanel({
     };
   }, [isMobile, isResizing, onHeightChange]);
 
-  if (!project || !isOpen) {
+  if (!boundProject || !isOpen) {
     return null;
   }
 
@@ -118,7 +124,7 @@ export default function IntegratedTerminalPanel({
           </div>
           <div className="min-w-0">
             <div className="text-sm font-medium text-foreground">{title}</div>
-            <div className="truncate text-[11px] text-muted-foreground">{project.displayName}</div>
+            <div className="truncate text-[11px] text-muted-foreground">{projectDisplayName}</div>
           </div>
         </div>
 
@@ -135,8 +141,8 @@ export default function IntegratedTerminalPanel({
 
       <div className="h-[calc(100%-49px)] min-h-0">
         <StandaloneShell
-          project={project}
-          session={session}
+          project={boundProject}
+          session={boundSession}
           showHeader={false}
           showShellHeader={false}
           isActive={isOpen}

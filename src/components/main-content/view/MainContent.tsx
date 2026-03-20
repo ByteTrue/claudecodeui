@@ -227,8 +227,10 @@ function MainContent({
         </div>
 
         <IntegratedTerminalPanel
-          project={selectedProject}
-          session={selectedSession}
+          currentProject={selectedProject}
+          terminalBinding={terminalBinding}
+          boundProject={boundProject}
+          boundSession={boundSession}
           isOpen={terminalPanelState.isOpen}
           focusVersion={terminalPanelState.focusVersion}
           height={terminalPanelState.height}
