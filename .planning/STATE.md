@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_for_verification
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-20T18:52:07.264Z"
+status: human_verification_required
+stopped_at: Phase 2 awaiting HUMAN-UAT approval
+last_updated: "2026-03-20T19:03:35.000Z"
 progress:
   total_phases: 5
   completed_phases: 1
@@ -20,11 +20,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Users should be able to do their normal project work inside the app without breaking flow or leaving to a separate terminal window.
-**Current focus:** Phase 02 — project-aware-terminal-launch verification
+**Current focus:** Phase 02 — human verification
 
 ## Current Position
 
-Phase: 02 (project-aware-terminal-launch) — READY FOR VERIFICATION
+Phase: 02 (project-aware-terminal-launch) — HUMAN VERIFICATION REQUIRED
 Plan: 2 of 2
 Progress: [██████████] 100%
 
@@ -77,10 +77,10 @@ None yet.
 ### Blockers/Concerns
 
 - Mobile keyboard and viewport behavior may force UI compromises during implementation
-- Phase 2 still needs phase-level verification against live shell behavior, header identity clarity, and resize stability
+- Human verification still needs to confirm bound-project reopen behavior, live PTY IO, and resize/reopen fit stability
 
 ## Session Continuity
 
-Last session: 2026-03-20T18:52:07.263Z
-Stopped at: Completed 02-02-PLAN.md
-Resume file: None
+Last session: 2026-03-20T19:03:35.000Z
+Stopped at: Phase 2 awaiting HUMAN-UAT approval
+Resume file: .planning/phases/02-project-aware-terminal-launch/02-HUMAN-UAT.md
