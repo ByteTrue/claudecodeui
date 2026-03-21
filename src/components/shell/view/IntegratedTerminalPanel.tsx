@@ -49,12 +49,12 @@ export default function IntegratedTerminalPanel({
   onClose,
   onHeightChange,
 }: IntegratedTerminalPanelProps) {
-  const { t } = useTranslation(['common', 'chat']);
+  const { t } = useTranslation('chat');
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [shellStatus, setShellStatus] = useState<ShellStatusSnapshot>(DEFAULT_SHELL_STATUS);
 
-  const title = useMemo(() => t('tabs.shell'), [t]);
+  const title = useMemo(() => t('shell.header.title'), [t]);
   const displayProject = boundProject ?? currentProject;
   const projectDisplayName = terminalBinding?.projectDisplayName || displayProject?.displayName || '';
   const shortProjectPath = useMemo(

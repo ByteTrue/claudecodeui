@@ -231,6 +231,7 @@
     "loading": "Загрузка терминала...",
     "connecting": "Подключение к оболочке...",
     "header": {
+      "title": "Терминал",
       "live": "Активно",
       "disconnected": "Отключено",
       "viewingProject": "Просмотр: {{projectName}}"

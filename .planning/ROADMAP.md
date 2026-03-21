@@ -7,7 +7,7 @@ This roadmap turns the existing shell infrastructure into a workspace-native ter
 ## Phases
 
 - [x] **Phase 1: Integrated Terminal Panel** - Add a bottom-panel terminal that feels native to the existing workspace layout (completed 2026-03-16)
-- [ ] **Phase 2: Project-Aware Terminal Launch** - Make integrated terminals launch and behave in the current project context
+- [x] **Phase 2: Project-Aware Terminal Launch** - Make integrated terminals launch and behave in the current project context (completed 2026-03-21)
 - [ ] **Phase 3: Multi-Session Terminal Tabs** - Add tabbed terminal sessions with explicit lifecycle and status handling
 - [ ] **Phase 4: Mobile And Workflow Continuity** - Preserve terminal state during normal app use and make the feature core-usable on mobile
 - [ ] **Phase 5: Terminal Hardening And Recovery** - Polish terminal interactions, safe link behavior, and disconnect/recovery UX
@@ -95,7 +95,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Integrated Terminal Panel | 3/3 | Complete   | 2026-03-16 |
-| 2. Project-Aware Terminal Launch | 2/2 | In Review | - |
+| 2. Project-Aware Terminal Launch | 2/2 | Complete | 2026-03-21 |
 | 3. Multi-Session Terminal Tabs | 0/3 | Not started | - |
 | 4. Mobile And Workflow Continuity | 0/3 | Not started | - |
 | 5. Terminal Hardening And Recovery | 0/2 | Not started | - |

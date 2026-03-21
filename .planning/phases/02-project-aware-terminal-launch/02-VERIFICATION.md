@@ -1,7 +1,7 @@
 ---
 phase: 02-project-aware-terminal-launch
-verified: 2026-03-20T18:59:52Z
-status: human_needed
+verified: 2026-03-21T05:06:02Z
+status: passed
 score: 5/5 must-haves verified
 human_verification:
   - test: "Launch the integrated terminal from Project A, switch the workspace view to Project B, then close and reopen the panel"
@@ -18,9 +18,9 @@ human_verification:
 # Phase 2: Project-Aware Terminal Launch Verification Report
 
 **Phase Goal:** Integrated terminals launch in the correct project context and behave reliably as live terminals.
-**Verified:** 2026-03-20T18:59:52Z
-**Status:** human_needed
-**Re-verification:** No - initial verification
+**Verified:** 2026-03-21T05:06:02Z
+**Status:** passed
+**Re-verification:** Yes - browser-assisted runtime UAT on 2026-03-21
 
 ## Goal Achievement
 
@@ -65,9 +65,9 @@ human_verification:
 | Requirement | Source Plan | Description | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | `INTE-04` | `02-01-PLAN.md` | New terminal tabs start in the current project/workspace root by default | ✓ SATISFIED | The first open snapshots `selectedProject.fullPath || selectedProject.path`, `MainContent` preserves that bound project, and the shell init message uses the bound project path rather than later ambient workspace changes. |
-| `INTE-05` | `02-02-PLAN.md` | User can clearly tell which project/workspace a terminal tab belongs to | ✓ SATISFIED | The integrated header shows the bound project display name, shortened path, status chip, and mismatch pill; the matching translation key exists in `en/chat.json`. |
-| `TERM-01` | `02-01-PLAN.md` | User can type commands into the integrated terminal and receive real-time output | ✓ SATISFIED | `useShellTerminal` forwards terminal input, `useShellConnection` writes streamed output into xterm, and `server/index.js` writes to the PTY and sends output back over the socket. Human runtime confirmation is still recommended. |
-| `TERM-02` | `02-02-PLAN.md` | Terminal output and prompt layout remain correct when the panel size changes | ✓ SATISFIED | The shell body now uses flex/min-height layout and `useShellTerminal` keeps `ResizeObserver` plus `fit()` plus `resize` message propagation in place. Human visual confirmation is still recommended. |
+| `INTE-05` | `02-02-PLAN.md` | User can clearly tell which project/workspace a terminal tab belongs to | ✓ SATISFIED | The integrated header shows the bound project display name, shortened path, status chip, and mismatch pill; the runtime gap on header copy was closed by using `chat` namespace keys plus a dedicated `shell.header.title` translation. |
+| `TERM-01` | `02-01-PLAN.md` | User can type commands into the integrated terminal and receive real-time output | ✓ SATISFIED | `useShellTerminal` forwards terminal input, `useShellConnection` writes streamed output into xterm, and browser-assisted runtime UAT confirmed live `/shell` input plus streamed output in the same panel. |
+| `TERM-02` | `02-02-PLAN.md` | Terminal output and prompt layout remain correct when the panel size changes | ✓ SATISFIED | The shell body now uses flex/min-height layout, `useShellTerminal` keeps `ResizeObserver` plus `fit()` plus `resize` message propagation in place, and runtime UAT confirmed stable rows after resize and reopen. |
 
 Phase 2 plan frontmatter declares `INTE-04`, `TERM-01`, `INTE-05`, and `TERM-02`, and `REQUIREMENTS.md` maps exactly those four IDs to Phase 2. No orphaned Phase 2 requirement IDs were found.
 
@@ -77,29 +77,30 @@ Phase 2 plan frontmatter declares `INTE-04`, `TERM-01`, `INTE-05`, and `TERM-02`
 | --- | --- | --- | --- | --- |
 | None | - | No blocker stubs, TODO/FIXME markers, or placeholder implementations were found in the phase-touched files after reviewing the terminal-binding and shell-path changes. | Info | No automated code-level gaps were identified from the anti-pattern pass. |
 
-### Human Verification Required
+### Runtime Gap Closure
+
+Browser-assisted UAT on 2026-03-21 surfaced one real runtime gap before final pass: the integrated header rendered `shell.header.live` and `shell.header.viewingProject` as raw keys, and the title showed `Shell` instead of the fixed `Terminal` required by `02-CONTEXT.md`. That gap was closed by binding `IntegratedTerminalPanel` to the `chat` namespace for shell header copy and by adding a dedicated `shell.header.title` translation across the shipped locales. The same browser session was then rerun end to end.
+
+### Runtime UAT Completed
 
 ### 1. Project-Bound Reopen
 
-**Test:** Launch the integrated terminal from Project A, switch the workspace view to Project B, then close and reopen the panel.
-**Expected:** The shell remains attached to Project A, the header still shows Project A, and the mismatch pill shows Project B as the currently viewed project.
-**Why human:** The binding and mismatch logic are present in code, but the browser interaction and reconnect timing must be observed live.
+**Result:** Passed
+**Evidence:** Opened the integrated terminal from `@siteboon/claude-code-ui`, switched the workspace view to `nanoclaw`, then hid and reopened the panel. The header stayed `Terminal / Live / @siteboon/claude-code-ui / .../playground/claudecodeui / Viewing nanoclaw`, the reopen `init` payload kept `projectPath=/Users/21jie/workspace/playground/claudecodeui`, and the runtime stream included `[Reconnected to existing session]`.
 
 ### 2. Live Terminal Input And Output
 
-**Test:** Type `pwd` and `echo terminal-ok` in the integrated terminal.
-**Expected:** Commands execute in the bound project root, output streams back in the same panel, and reconnecting after a close continues the same live terminal session when the PTY is still alive.
-**Why human:** Real-time PTY behavior depends on a running browser, WebSocket connection, terminal renderer, and backend process.
+**Result:** Passed
+**Evidence:** The integrated terminal is provider-backed (`provider="claude"`, `isPlainShell=false`), so `pwd` is interpreted by Claude Code rather than a raw Bash prompt. Runtime UAT still confirmed live PTY behavior: browser keyboard input sent `p`, `w`, `d`, and `\r` over `/shell`; the same panel immediately echoed `pwd`; streamed output continued live; and bound-root evidence came from the `init.projectPath=/Users/21jie/workspace/playground/claudecodeui` payload plus terminal output reporting `当前目录还是 /Users/21jie/workspace/playground/claudecodeui`.
 
 ### 3. Resize And Reopen Fit Stability
 
-**Test:** Run a command that emits multiple lines, drag the panel height up and down several times, then close and reopen the panel.
-**Expected:** Prompt rows and output remain aligned, no viewport clipping appears, and xterm refits cleanly after each resize and after reopen.
-**Why human:** The layout and fit chain is wired correctly in code, but final validation requires runtime DOM measurements and visual inspection.
+**Result:** Passed
+**Evidence:** Resizing the panel upward changed the live shell from `rows=8` to `rows=18` at `panelHeight=377`; resizing back down changed it to `rows=12` at `panelHeight=274`; after hide/reopen the panel restored at `panelHeight=274`, the reopen `init` payload reused `rows=12`, and the final runtime screenshot showed aligned prompt/output with no visible clipping.
 
 ### Gaps Summary
 
-No automated code gaps were found. The declared must-haves from `02-01-PLAN.md` and `02-02-PLAN.md` are present and wired through the current codebase, and all four Phase 2 requirement IDs are accounted for without orphaned entries. Remaining verification is human UAT of live terminal behavior, reconnect timing, and visual fit during resize and reopen.
+No remaining code or runtime gaps were found after browser-assisted UAT. The declared must-haves from `02-01-PLAN.md` and `02-02-PLAN.md` are present, all four Phase 2 requirement IDs are accounted for without orphaned entries, and the previously pending live UAT checks now pass end to end.
 
 #### Evidence References
 
@@ -129,9 +130,9 @@ No automated code gaps were found. The declared must-haves from `02-01-PLAN.md` 
 - `/Users/21jie/workspace/personal/claudecodeui/server/index.js:1640`
 - `/Users/21jie/workspace/personal/claudecodeui/server/index.js:1812`
 - `/Users/21jie/workspace/personal/claudecodeui/server/index.js:1940`
-- `/Users/21jie/workspace/personal/claudecodeui/src/i18n/locales/en/chat.json:233`
+- `/Users/21jie/workspace/personal/claudecodeui/src/i18n/locales/en/chat.json:234`
 
 ---
 
-_Verified: 2026-03-20T18:59:52Z_
+_Verified: 2026-03-21T05:06:02Z_
 _Verifier: Claude (gsd-verifier)_

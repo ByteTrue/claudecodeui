@@ -204,6 +204,7 @@
     "loading": "ターミナルを読み込んでいます...",
     "connecting": "シェルに接続しています...",
     "header": {
+      "title": "ターミナル",
       "live": "接続済み",
       "disconnected": "切断済み",
       "viewingProject": "表示中: {{projectName}}"

@@ -231,6 +231,7 @@
     "loading": "Loading terminal...",
     "connecting": "Connecting to shell...",
     "header": {
+      "title": "Terminal",
       "live": "Live",
       "disconnected": "Disconnected",
       "viewingProject": "Viewing {{projectName}}"

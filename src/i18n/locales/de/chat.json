@@ -231,6 +231,7 @@
     "loading": "Terminal wird geladen...",
     "connecting": "Verbindung zum Terminal wird hergestellt...",
     "header": {
+      "title": "Terminal",
       "live": "Live",
       "disconnected": "Getrennt",
       "viewingProject": "{{projectName}} wird angezeigt"

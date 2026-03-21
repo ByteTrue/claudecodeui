@@ -213,6 +213,7 @@
     "loading": "正在加载终端...",
     "connecting": "正在连接到 Shell...",
     "header": {
+      "title": "终端",
       "live": "在线",
       "disconnected": "已断开",
       "viewingProject": "当前查看 {{projectName}}"
