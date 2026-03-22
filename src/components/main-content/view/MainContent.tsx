@@ -50,6 +50,11 @@ function MainContent({
   onMenuClick,
   onOpenTerminalPanel,
   onCloseTerminalPanel,
+  onNewTerminalTab,
+  onSelectTerminalTab,
+  onCloseTerminalTab,
+  onRestartTerminalTab,
+  onTerminalTabStatusChange,
   onTerminalPanelHeightChange,
   isLoading,
   onInputFocusChange,
@@ -70,35 +75,37 @@ function MainContent({
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings() as TasksSettingsContextValue;
 
   const shouldShowTasksTab = Boolean(tasksEnabled && isTaskMasterInstalled);
-  const terminalBinding = terminalPanelState.binding;
+  const activeTerminalTab = terminalPanelState.tabs.find((tab) => tab.id === terminalPanelState.activeTabId)
+    ?? terminalPanelState.tabs[0]
+    ?? null;
   const boundProject = useMemo(() => {
-    if (!terminalBinding) {
+    if (!activeTerminalTab) {
       return null;
     }
 
-    return projects.find((project) => project.name === terminalBinding.projectName) ?? {
-      name: terminalBinding.projectName,
-      displayName: terminalBinding.projectDisplayName,
-      fullPath: terminalBinding.projectPath,
-      path: terminalBinding.projectPath,
+    return projects.find((project) => project.name === activeTerminalTab.binding.projectName) ?? {
+      name: activeTerminalTab.binding.projectName,
+      displayName: activeTerminalTab.binding.projectDisplayName,
+      fullPath: activeTerminalTab.binding.projectPath,
+      path: activeTerminalTab.binding.projectPath,
     };
-  }, [projects, terminalBinding]);
+  }, [activeTerminalTab, projects]);
   const boundSession = useMemo(() => {
-    if (!terminalBinding?.sessionId) {
+    if (!activeTerminalTab?.binding.sessionId) {
       return null;
     }
 
     const projectSession = boundProject
-      ? getProjectSessions(boundProject).find((session) => session.id === terminalBinding.sessionId)
+      ? getProjectSessions(boundProject).find((session) => session.id === activeTerminalTab.binding.sessionId)
       : null;
 
     return projectSession
-      ? { ...projectSession, __provider: projectSession.__provider || terminalBinding.provider }
+      ? { ...projectSession, __provider: projectSession.__provider || activeTerminalTab.binding.provider }
       : {
-          id: terminalBinding.sessionId,
-          __provider: terminalBinding.provider,
+          id: activeTerminalTab.binding.sessionId,
+          __provider: activeTerminalTab.binding.provider,
         };
-  }, [boundProject, terminalBinding]);
+  }, [activeTerminalTab, boundProject]);
 
   const {
     editingFile,
@@ -228,14 +235,20 @@ function MainContent({
 
         <IntegratedTerminalPanel
           currentProject={selectedProject}
-          terminalBinding={terminalBinding}
           boundProject={boundProject}
           boundSession={boundSession}
+          terminalTabs={terminalPanelState.tabs}
+          activeTerminalTabId={activeTerminalTab?.id ?? null}
           isOpen={terminalPanelState.isOpen}
           focusVersion={terminalPanelState.focusVersion}
           height={terminalPanelState.height}
           isMobile={isMobile}
           onClose={onCloseTerminalPanel}
+          onNewTerminalTab={onNewTerminalTab}
+          onSelectTerminalTab={onSelectTerminalTab}
+          onCloseTerminalTab={onCloseTerminalTab}
+          onRestartTerminalTab={onRestartTerminalTab}
+          onTerminalTabStatusChange={onTerminalTabStatusChange}
           onHeightChange={onTerminalPanelHeightChange}
         />
       </div>

@@ -4,12 +4,14 @@ import { api } from '../utils/api';
 import type {
   AppSocketMessage,
   AppTab,
+  IntegratedTerminalTab,
   LoadingProgress,
   Project,
   ProjectSession,
   ProjectsUpdatedMessage,
   SessionProvider,
   TerminalPanelState,
+  TerminalTabStatus,
 } from '../types/app';
 
 type UseProjectsStateArgs = {
@@ -171,6 +173,14 @@ const readPersistedTerminalPanelHeight = (): number => {
   return DEFAULT_TERMINAL_PANEL_HEIGHT;
 };
 
+const getUniqueTerminalTabTitle = (
+  existingTabs: IntegratedTerminalTab[],
+  baseTitle: string,
+): string => {
+  const duplicateCount = existingTabs.filter((tab) => tab.title === baseTitle || tab.title.startsWith(`${baseTitle} · `)).length;
+  return duplicateCount === 0 ? baseTitle : `${baseTitle} · ${duplicateCount + 1}`;
+};
+
 export function useProjectsState({
   sessionId,
   navigate,
@@ -186,7 +196,8 @@ export function useProjectsState({
     isOpen: false,
     height: readPersistedTerminalPanelHeight(),
     focusVersion: 0,
-    binding: null,
+    tabs: [],
+    activeTabId: null,
   });
 
   useEffect(() => {
@@ -246,28 +257,66 @@ export function useProjectsState({
     await fetchProjects({ showLoadingState: false });
   }, [fetchProjects]);
 
+  const buildTerminalTab = useCallback(
+    (existingTabs: IntegratedTerminalTab[]): IntegratedTerminalTab | null => {
+      if (!selectedProject) {
+        return null;
+      }
+
+      const now = Date.now();
+      const baseTitle = selectedProject.displayName;
+
+      return {
+        id: window.crypto.randomUUID(),
+        title: getUniqueTerminalTabTitle(existingTabs, baseTitle),
+        binding: {
+          projectName: selectedProject.name,
+          projectDisplayName: selectedProject.displayName,
+          projectPath: selectedProject.fullPath || selectedProject.path || '',
+          sessionId: selectedSession?.id || null,
+          provider: selectedSession?.__provider || readPersistedProvider(),
+        },
+        status: 'connecting',
+        canRetry: false,
+        exitCode: null,
+        restartNonce: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+    },
+    [selectedProject, selectedSession],
+  );
+
   const openTerminalPanel = useCallback(() => {
-    setTerminalPanelState((previous) => ({
-      ...previous,
-      isOpen: true,
-      focusVersion: previous.focusVersion + 1,
-      binding: previous.binding ?? (selectedProject
-        ? {
-            projectName: selectedProject.name,
-            projectDisplayName: selectedProject.displayName,
-            projectPath: selectedProject.fullPath || selectedProject.path || '',
-            sessionId: selectedSession?.id || null,
-            provider: selectedSession?.__provider || readPersistedProvider(),
-          }
-        : null),
-    }));
-  }, [selectedProject, selectedSession]);
+    setTerminalPanelState((previous) => {
+      if (previous.tabs.length === 0) {
+        const firstTab = buildTerminalTab(previous.tabs);
+        if (!firstTab) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          isOpen: true,
+          focusVersion: previous.focusVersion + 1,
+          tabs: [firstTab],
+          activeTabId: firstTab.id,
+        };
+      }
+
+      return {
+        ...previous,
+        isOpen: true,
+        focusVersion: previous.focusVersion + 1,
+        activeTabId: previous.activeTabId ?? previous.tabs[0]?.id ?? null,
+      };
+    });
+  }, [buildTerminalTab]);
 
   const closeTerminalPanel = useCallback(() => {
     setTerminalPanelState((previous) => ({
       ...previous,
       isOpen: false,
-      binding: previous.binding,
     }));
   }, []);
 
@@ -277,6 +326,134 @@ export function useProjectsState({
       height: clampTerminalPanelHeight(height),
     }));
   }, []);
+
+  const createTerminalTab = useCallback(() => {
+    setTerminalPanelState((previous) => {
+      const nextTab = buildTerminalTab(previous.tabs);
+      if (!nextTab) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        isOpen: true,
+        focusVersion: previous.focusVersion + 1,
+        tabs: [...previous.tabs, nextTab],
+        activeTabId: nextTab.id,
+      };
+    });
+  }, [buildTerminalTab]);
+
+  const setActiveTerminalTab = useCallback((tabId: string) => {
+    setTerminalPanelState((previous) => {
+      if (!previous.tabs.some((tab) => tab.id === tabId)) {
+        return previous;
+      }
+
+      const isSwitchingTabs = previous.activeTabId !== tabId;
+      return {
+        ...previous,
+        isOpen: true,
+        activeTabId: tabId,
+        focusVersion: isSwitchingTabs ? previous.focusVersion + 1 : previous.focusVersion,
+      };
+    });
+  }, []);
+
+  const closeTerminalTab = useCallback((tabId: string) => {
+    setTerminalPanelState((previous) => {
+      const targetIndex = previous.tabs.findIndex((tab) => tab.id === tabId);
+      if (targetIndex === -1) {
+        return previous;
+      }
+
+      const nextTabs = previous.tabs.filter((tab) => tab.id !== tabId);
+      if (nextTabs.length === 0) {
+        return {
+          ...previous,
+          isOpen: false,
+          tabs: [],
+          activeTabId: null,
+        };
+      }
+
+      const isClosingActiveTab = previous.activeTabId === tabId;
+      const leftNeighbor = previous.tabs[targetIndex - 1];
+      const nextActiveTabId = isClosingActiveTab
+        ? leftNeighbor?.id ?? nextTabs[0]?.id ?? null
+        : previous.activeTabId;
+
+      return {
+        ...previous,
+        tabs: nextTabs,
+        activeTabId: nextActiveTabId,
+        focusVersion: isClosingActiveTab ? previous.focusVersion + 1 : previous.focusVersion,
+      };
+    });
+  }, []);
+
+  const restartTerminalTab = useCallback((tabId: string) => {
+    setTerminalPanelState((previous) => {
+      let foundTarget = false;
+      const now = Date.now();
+      const nextTabs: IntegratedTerminalTab[] = previous.tabs.map((tab) => {
+        if (tab.id !== tabId) {
+          return tab;
+        }
+
+        foundTarget = true;
+        return {
+          ...tab,
+          status: 'connecting',
+          canRetry: false,
+          exitCode: null,
+          restartNonce: tab.restartNonce + 1,
+          updatedAt: now,
+        };
+      });
+
+      if (!foundTarget) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        isOpen: true,
+        activeTabId: tabId,
+        tabs: nextTabs,
+        focusVersion: previous.focusVersion + 1,
+      };
+    });
+  }, []);
+
+  const updateTerminalTabStatus = useCallback(
+    (
+      targetTabId: string,
+      nextStatus: {
+        status: TerminalTabStatus;
+        canRetry: boolean;
+        exitCode: number | null;
+      },
+    ) => {
+      setTerminalPanelState((previous) => ({
+        ...previous,
+        tabs: previous.tabs.map((tab) => {
+          if (tab.id !== targetTabId) {
+            return tab;
+          }
+
+          return {
+            ...tab,
+            status: nextStatus.status,
+            canRetry: nextStatus.canRetry,
+            exitCode: nextStatus.exitCode,
+            updatedAt: Date.now(),
+          };
+        }),
+      }));
+    },
+    [],
+  );
 
   const openSettings = useCallback((tab = 'tools') => {
     setSettingsInitialTab(tab);
@@ -652,6 +829,11 @@ export function useProjectsState({
     setShowSettings,
     openTerminalPanel,
     closeTerminalPanel,
+    createTerminalTab,
+    setActiveTerminalTab,
+    closeTerminalTab,
+    restartTerminalTab,
+    updateTerminalTabStatus,
     setTerminalPanelHeight,
     openSettings,
     fetchProjects,

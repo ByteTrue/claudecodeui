@@ -234,7 +234,16 @@
       "title": "Terminal",
       "live": "Live",
       "disconnected": "Disconnected",
-      "viewingProject": "Viewing {{projectName}}"
+      "viewingProject": "Viewing {{projectName}}",
+      "statusConnecting": "Connecting",
+      "statusLive": "Live",
+      "statusDisconnected": "Disconnected",
+      "statusExited": "Exited"
+    },
+    "tabs": {
+      "newTab": "New tab",
+      "closeTab": "Close {{title}}",
+      "restartTab": "Restart {{title}}"
     },
     "startSession": "Start a new Claude session",
     "resumeSession": "Resume session: {{displayName}}...",

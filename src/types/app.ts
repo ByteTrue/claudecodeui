@@ -10,11 +10,26 @@ export interface TerminalBindingContext {
   provider: SessionProvider;
 }
 
+export type TerminalTabStatus = 'connecting' | 'live' | 'disconnected' | 'exited';
+
+export interface IntegratedTerminalTab {
+  id: string;
+  title: string;
+  binding: TerminalBindingContext;
+  status: TerminalTabStatus;
+  canRetry: boolean;
+  exitCode: number | null;
+  restartNonce: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface TerminalPanelState {
   isOpen: boolean;
   height: number;
   focusVersion: number;
-  binding: TerminalBindingContext | null;
+  tabs: IntegratedTerminalTab[];
+  activeTabId: string | null;
 }
 
 export interface ProjectSession {

@@ -1,5 +1,11 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { AppTab, Project, ProjectSession, TerminalPanelState } from '../../../types/app';
+import type {
+  AppTab,
+  Project,
+  ProjectSession,
+  TerminalPanelState,
+  TerminalTabStatus,
+} from '../../../types/app';
 
 export type SessionLifecycleHandler = (sessionId?: string | null) => void;
 
@@ -46,6 +52,18 @@ export type MainContentProps = {
   onMenuClick: () => void;
   onOpenTerminalPanel: () => void;
   onCloseTerminalPanel: () => void;
+  onNewTerminalTab: () => void;
+  onSelectTerminalTab: (tabId: string) => void;
+  onCloseTerminalTab: (tabId: string) => void;
+  onRestartTerminalTab: (tabId: string) => void;
+  onTerminalTabStatusChange: (
+    tabId: string,
+    nextStatus: {
+      status: TerminalTabStatus;
+      canRetry: boolean;
+      exitCode: number | null;
+    },
+  ) => void;
   onTerminalPanelHeightChange: (height: number) => void;
   isLoading: boolean;
   onInputFocusChange: (focused: boolean) => void;

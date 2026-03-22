@@ -43,6 +43,11 @@ export default function AppContent() {
     setShowSettings,
     openTerminalPanel,
     closeTerminalPanel,
+    createTerminalTab,
+    setActiveTerminalTab,
+    closeTerminalTab,
+    restartTerminalTab,
+    updateTerminalTabStatus,
     setTerminalPanelHeight,
     openSettings,
     refreshProjectsSilently,
@@ -179,6 +184,11 @@ export default function AppContent() {
           onMenuClick={() => setSidebarOpen(true)}
           onOpenTerminalPanel={openTerminalPanel}
           onCloseTerminalPanel={closeTerminalPanel}
+          onNewTerminalTab={createTerminalTab}
+          onSelectTerminalTab={setActiveTerminalTab}
+          onCloseTerminalTab={closeTerminalTab}
+          onRestartTerminalTab={restartTerminalTab}
+          onTerminalTabStatusChange={updateTerminalTabStatus}
           onTerminalPanelHeightChange={setTerminalPanelHeight}
           isLoading={isLoadingProjects}
           onInputFocusChange={setIsInputFocused}

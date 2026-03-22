@@ -1,26 +1,39 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Terminal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Plus, RotateCcw, Terminal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { Project, ProjectSession, TerminalBindingContext } from '../../../types/app';
+import type {
+  IntegratedTerminalTab,
+  Project,
+  ProjectSession,
+  TerminalTabStatus,
+} from '../../../types/app';
 import type { ShellStatusSnapshot } from '../types/types';
 import StandaloneShell from '../../standalone-shell/view/StandaloneShell';
 
 type IntegratedTerminalPanelProps = {
   currentProject: Project | null;
-  terminalBinding: TerminalBindingContext | null;
   boundProject: Project | null;
   boundSession: ProjectSession | null;
+  terminalTabs: IntegratedTerminalTab[];
+  activeTerminalTabId: string | null;
   isOpen: boolean;
   focusVersion: number;
   height: number;
   isMobile: boolean;
   onClose: () => void;
+  onNewTerminalTab: () => void;
+  onSelectTerminalTab: (tabId: string) => void;
+  onCloseTerminalTab: (tabId: string) => void;
+  onRestartTerminalTab: (tabId: string) => void;
+  onTerminalTabStatusChange: (
+    tabId: string,
+    nextStatus: {
+      status: TerminalTabStatus;
+      canRetry: boolean;
+      exitCode: number | null;
+    },
+  ) => void;
   onHeightChange: (height: number) => void;
-};
-
-const DEFAULT_SHELL_STATUS: ShellStatusSnapshot = {
-  phase: 'loading',
-  canRetry: false,
 };
 
 const getShortProjectPath = (projectPath: string): string => {
@@ -37,51 +50,79 @@ const getShortProjectPath = (projectPath: string): string => {
   return `.../${segments.slice(-2).join('/')}`;
 };
 
+const getTabStatusClassName = (status: TerminalTabStatus, canRetry: boolean): string => {
+  switch (status) {
+    case 'live':
+      return 'bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-400/20';
+    case 'disconnected':
+      return canRetry
+        ? 'bg-amber-500/10 text-amber-200 ring-1 ring-amber-400/20'
+        : 'bg-slate-500/10 text-slate-200 ring-1 ring-slate-300/20';
+    case 'exited':
+      return 'bg-rose-500/10 text-rose-200 ring-1 ring-rose-400/20';
+    default:
+      return 'bg-slate-500/10 text-slate-200 ring-1 ring-slate-300/20';
+  }
+};
+
 export default function IntegratedTerminalPanel({
   currentProject,
-  terminalBinding,
   boundProject,
   boundSession,
+  terminalTabs,
+  activeTerminalTabId,
   isOpen,
   focusVersion,
   height,
   isMobile,
   onClose,
+  onNewTerminalTab,
+  onSelectTerminalTab,
+  onCloseTerminalTab,
+  onRestartTerminalTab,
+  onTerminalTabStatusChange,
   onHeightChange,
 }: IntegratedTerminalPanelProps) {
   const { t } = useTranslation('chat');
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [isResizing, setIsResizing] = useState(false);
-  const [shellStatus, setShellStatus] = useState<ShellStatusSnapshot>(DEFAULT_SHELL_STATUS);
-
-  const title = useMemo(() => t('shell.header.title'), [t]);
+  const activeTab = terminalTabs.find((tab) => tab.id === activeTerminalTabId) ?? terminalTabs[0] ?? null;
+  const title = t('shell.header.title', { defaultValue: 'Terminal' });
   const displayProject = boundProject ?? currentProject;
-  const projectDisplayName = terminalBinding?.projectDisplayName || displayProject?.displayName || '';
-  const shortProjectPath = useMemo(
-    () => getShortProjectPath(terminalBinding?.projectPath || displayProject?.fullPath || displayProject?.path || ''),
-    [displayProject?.fullPath, displayProject?.path, terminalBinding?.projectPath],
+  const projectDisplayName = activeTab?.binding.projectDisplayName || displayProject?.displayName || '';
+  const shortProjectPath = getShortProjectPath(
+    activeTab?.binding.projectPath || displayProject?.fullPath || displayProject?.path || '',
   );
   const isProjectMismatch = Boolean(
-    terminalBinding && currentProject?.name && currentProject.name !== terminalBinding.projectName,
+    activeTab && currentProject?.name && currentProject.name !== activeTab.binding.projectName,
   );
-  const statusLabel = useMemo(() => {
-    switch (shellStatus.phase) {
-      case 'connecting':
-        return t('shell.connecting');
+  const getStatusLabel = (status: TerminalTabStatus) => {
+    switch (status) {
       case 'live':
-        return t('shell.header.live');
+        return t('shell.header.statusLive', { defaultValue: 'Live' });
       case 'disconnected':
-        return t('shell.header.disconnected');
+        return t('shell.header.statusDisconnected', { defaultValue: 'Disconnected' });
+      case 'exited':
+        return t('shell.header.statusExited', { defaultValue: 'Exited' });
       default:
-        return t('shell.status.initializing');
+        return t('shell.header.statusConnecting', { defaultValue: 'Connecting' });
     }
-  }, [shellStatus.phase, t]);
-  const statusClassName =
-    shellStatus.phase === 'live'
-      ? 'bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-400/20'
-      : shellStatus.phase === 'disconnected' && shellStatus.canRetry
-        ? 'bg-amber-500/10 text-amber-200 ring-1 ring-amber-400/20'
-        : 'bg-slate-500/10 text-slate-200 ring-1 ring-slate-300/20';
+  };
+  const activeStatusLabel = activeTab ? getStatusLabel(activeTab.status) : '';
+  const activeStatusClassName = activeTab
+    ? getTabStatusClassName(activeTab.status, activeTab.canRetry)
+    : '';
+  const handleShellStatusChange = (shellStatus: ShellStatusSnapshot) => {
+    if (!activeTab) {
+      return;
+    }
+
+    onTerminalTabStatusChange(activeTab.id, {
+      status: shellStatus.phase === 'loading' ? 'connecting' : shellStatus.phase,
+      canRetry: shellStatus.canRetry,
+      exitCode: null,
+    });
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -140,7 +181,7 @@ export default function IntegratedTerminalPanel({
     };
   }, [isMobile, isResizing, onHeightChange]);
 
-  if (!boundProject || !isOpen) {
+  if (!activeTab || !boundProject || !isOpen) {
     return null;
   }
 
@@ -172,10 +213,10 @@ export default function IntegratedTerminalPanel({
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <div className="text-sm font-medium text-foreground">{title}</div>
               <span
-                className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusClassName}`}
-                title={statusLabel}
+                className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${activeStatusClassName}`}
+                title={activeStatusLabel}
               >
-                <span className="truncate">{statusLabel}</span>
+                <span className="truncate">{activeStatusLabel}</span>
               </span>
             </div>
             <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2 text-[11px]">
@@ -186,7 +227,10 @@ export default function IntegratedTerminalPanel({
               {isProjectMismatch && currentProject && (
                 <span className="inline-flex max-w-full items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                   <span className="truncate">
-                    {t('shell.header.viewingProject', { projectName: currentProject.displayName })}
+                    {t('shell.header.viewingProject', {
+                      projectName: currentProject.displayName,
+                      defaultValue: `Viewing ${currentProject.displayName}`,
+                    })}
                   </span>
                 </span>
               )}
@@ -194,14 +238,84 @@ export default function IntegratedTerminalPanel({
           </div>
         </div>
 
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onRestartTerminalTab(activeTab.id)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            title={t('shell.tabs.restartTab', {
+              title: activeTab.title,
+              defaultValue: `Restart ${activeTab.title}`,
+            })}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            title="Hide terminal panel"
+          >
+            <ChevronDown className="h-4 w-4" />
+            <span className="hidden sm:inline">Hide</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
+          {terminalTabs.map((tab) => {
+            const isActiveTab = tab.id === activeTab.id;
+            const tabStatusLabel = getStatusLabel(tab.status);
+
+            return (
+              <div
+                key={tab.id}
+                className={`flex min-w-[180px] max-w-[260px] items-center gap-2 rounded-md border px-2 py-1 ${
+                  isActiveTab
+                    ? 'border-primary/60 bg-primary/10 text-foreground'
+                    : 'border-border/60 bg-background/40 text-muted-foreground'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectTerminalTab(tab.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <span className="truncate text-sm font-medium">{tab.title}</span>
+                  <span
+                    className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getTabStatusClassName(tab.status, tab.canRetry)}`}
+                    title={tabStatusLabel}
+                  >
+                    <span className="truncate">{tabStatusLabel}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCloseTerminalTab(tab.id);
+                  }}
+                  className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  title={t('shell.tabs.closeTab', {
+                    title: tab.title,
+                    defaultValue: `Close ${tab.title}`,
+                  })}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
         <button
           type="button"
-          onClick={onClose}
-          className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          title="Hide terminal panel"
+          onClick={onNewTerminalTab}
+          className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          title={t('shell.tabs.newTab', { defaultValue: 'New tab' })}
         >
-          <ChevronDown className="h-4 w-4" />
-          <span className="hidden sm:inline">Hide</span>
+          <Plus className="h-4 w-4" />
         </button>
       </div>
 
@@ -213,7 +327,7 @@ export default function IntegratedTerminalPanel({
           showShellHeader={false}
           isActive={isOpen}
           className="h-full min-h-0"
-          onStatusChange={setShellStatus}
+          onStatusChange={handleShellStatusChange}
         />
       </div>
     </div>
