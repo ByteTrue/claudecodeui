@@ -216,7 +216,16 @@
       "title": "终端",
       "live": "在线",
       "disconnected": "已断开",
-      "viewingProject": "当前查看 {{projectName}}"
+      "viewingProject": "当前查看 {{projectName}}",
+      "statusConnecting": "连接中",
+      "statusLive": "在线",
+      "statusDisconnected": "已断开",
+      "statusExited": "已退出"
+    },
+    "tabs": {
+      "newTab": "新建标签页",
+      "closeTab": "关闭 {{title}}",
+      "restartTab": "重启 {{title}}"
     },
     "startSession": "启动新的 Claude 会话",
     "resumeSession": "恢复会话：{{displayName}}...",

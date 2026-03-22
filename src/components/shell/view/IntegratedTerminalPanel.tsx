@@ -321,6 +321,7 @@ export default function IntegratedTerminalPanel({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <StandaloneShell
+          key={`terminal-shell-${activeTab.id}`}
           project={boundProject}
           session={boundSession}
           terminalTabId={activeTab.id}

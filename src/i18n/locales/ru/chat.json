@@ -234,7 +234,16 @@
       "title": "Терминал",
       "live": "Активно",
       "disconnected": "Отключено",
-      "viewingProject": "Просмотр: {{projectName}}"
+      "viewingProject": "Просмотр: {{projectName}}",
+      "statusConnecting": "Подключение",
+      "statusLive": "Активно",
+      "statusDisconnected": "Отключено",
+      "statusExited": "Завершено"
+    },
+    "tabs": {
+      "newTab": "Новая вкладка",
+      "closeTab": "Закрыть {{title}}",
+      "restartTab": "Перезапустить {{title}}"
     },
     "startSession": "Начать новый сеанс Claude",
     "resumeSession": "Возобновить сеанс: {{displayName}}...",

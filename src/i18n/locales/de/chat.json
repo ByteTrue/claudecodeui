@@ -234,7 +234,16 @@
       "title": "Terminal",
       "live": "Live",
       "disconnected": "Getrennt",
-      "viewingProject": "{{projectName}} wird angezeigt"
+      "viewingProject": "{{projectName}} wird angezeigt",
+      "statusConnecting": "Verbinden",
+      "statusLive": "Live",
+      "statusDisconnected": "Getrennt",
+      "statusExited": "Beendet"
+    },
+    "tabs": {
+      "newTab": "Neuer Tab",
+      "closeTab": "{{title}} schließen",
+      "restartTab": "{{title}} neu starten"
     },
     "startSession": "Neue Claude-Sitzung starten",
     "resumeSession": "Sitzung fortsetzen: {{displayName}}...",

@@ -207,7 +207,16 @@
       "title": "ターミナル",
       "live": "接続済み",
       "disconnected": "切断済み",
-      "viewingProject": "表示中: {{projectName}}"
+      "viewingProject": "表示中: {{projectName}}",
+      "statusConnecting": "接続中",
+      "statusLive": "接続済み",
+      "statusDisconnected": "切断済み",
+      "statusExited": "終了"
+    },
+    "tabs": {
+      "newTab": "新しいタブ",
+      "closeTab": "{{title}} を閉じる",
+      "restartTab": "{{title}} を再起動"
     },
     "startSession": "新しいClaudeセッションを開始",
     "resumeSession": "セッションを再開: {{displayName}}...",
