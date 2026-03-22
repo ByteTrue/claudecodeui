@@ -1608,8 +1608,22 @@ function handleShellConnection(ws) {
     console.log('🐚 Shell client connected');
     let shellProcess = null;
     let ptySessionKey = null;
+    let terminalTabId = 'shell';
     let urlDetectionBuffer = '';
     const announcedAuthUrls = new Set();
+    const sendShellMessage = (targetWs, payload) => {
+        if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+            targetWs.send(JSON.stringify(payload));
+        }
+    };
+    const emitShellStatus = (targetWs, phase, canRetry = phase === 'disconnected') => {
+        sendShellMessage(targetWs, {
+            type: 'status',
+            phase,
+            terminalTabId,
+            canRetry,
+        });
+    };
 
     ws.on('message', async (message) => {
         try {
@@ -1619,9 +1633,11 @@ function handleShellConnection(ws) {
             if (data.type === 'init') {
                 const projectPath = data.projectPath || process.cwd();
                 const sessionId = data.sessionId;
+                terminalTabId = data.terminalTabId || 'shell';
                 const hasSession = data.hasSession;
                 const provider = data.provider || 'claude';
                 const initialCommand = data.initialCommand;
+                const forceFresh = Boolean(data.forceFresh);
                 const isPlainShell = data.isPlainShell || (!!initialCommand && !hasSession) || provider === 'plain-shell';
                 urlDetectionBuffer = '';
                 announcedAuthUrls.clear();
@@ -1637,42 +1653,46 @@ function handleShellConnection(ws) {
                 const commandSuffix = isPlainShell && initialCommand
                     ? `_cmd_${Buffer.from(initialCommand).toString('base64').slice(0, 16)}`
                     : '';
-                ptySessionKey = `${projectPath}_${sessionId || 'default'}${commandSuffix}`;
+                ptySessionKey = `${projectPath}_${sessionId || 'default'}_${terminalTabId}${commandSuffix}`;
 
-                // Kill any existing login session before starting fresh
-                if (isLoginCommand) {
+                // Kill any existing cached session before starting fresh.
+                if (isLoginCommand || forceFresh) {
                     const oldSession = ptySessionsMap.get(ptySessionKey);
                     if (oldSession) {
-                        console.log('🧹 Cleaning up existing login session:', ptySessionKey);
+                        console.log('🧹 Cleaning up existing shell session:', ptySessionKey);
                         if (oldSession.timeoutId) clearTimeout(oldSession.timeoutId);
                         if (oldSession.pty && oldSession.pty.kill) oldSession.pty.kill();
+                        oldSession.ws = null;
                         ptySessionsMap.delete(ptySessionKey);
                     }
                 }
 
-                const existingSession = isLoginCommand ? null : ptySessionsMap.get(ptySessionKey);
+                const existingSession = (isLoginCommand || forceFresh) ? null : ptySessionsMap.get(ptySessionKey);
                 if (existingSession) {
                     console.log('♻️  Reconnecting to existing PTY session:', ptySessionKey);
                     shellProcess = existingSession.pty;
 
-                    clearTimeout(existingSession.timeoutId);
+                    if (existingSession.timeoutId) {
+                        clearTimeout(existingSession.timeoutId);
+                    }
+                    existingSession.timeoutId = null;
+                    existingSession.ws = ws;
+                    emitShellStatus(ws, 'live', false);
 
-                    ws.send(JSON.stringify({
+                    sendShellMessage(ws, {
                         type: 'output',
                         data: `\x1b[36m[Reconnected to existing session]\x1b[0m\r\n`
-                    }));
+                    });
 
                     if (existingSession.buffer && existingSession.buffer.length > 0) {
                         console.log(`📜 Sending ${existingSession.buffer.length} buffered messages`);
                         existingSession.buffer.forEach(bufferedData => {
-                            ws.send(JSON.stringify({
+                            sendShellMessage(ws, {
                                 type: 'output',
                                 data: bufferedData
-                            }));
+                            });
                         });
                     }
-
-                    existingSession.ws = ws;
 
                     return;
                 }
@@ -1695,10 +1715,10 @@ function handleShellConnection(ws) {
                         `\x1b[36mStarting new ${providerName} session in: ${projectPath}\x1b[0m\r\n`;
                 }
 
-                ws.send(JSON.stringify({
+                sendShellMessage(ws, {
                     type: 'output',
                     data: welcomeMsg
-                }));
+                });
 
                 try {
                     // Validate projectPath — resolve to absolute and verify it exists
@@ -1709,14 +1729,19 @@ function handleShellConnection(ws) {
                             throw new Error('Not a directory');
                         }
                     } catch (pathErr) {
-                        ws.send(JSON.stringify({ type: 'error', message: 'Invalid project path' }));
+                        sendShellMessage(ws, { type: 'error', message: 'Invalid project path' });
                         return;
                     }
 
-                    // Validate sessionId — only allow safe characters
-                    const safeSessionIdPattern = /^[a-zA-Z0-9_.\-:]+$/;
-                    if (sessionId && !safeSessionIdPattern.test(sessionId)) {
-                        ws.send(JSON.stringify({ type: 'error', message: 'Invalid session ID' }));
+                    // Validate sessionId and terminalTabId — only allow safe characters
+                    const safeIdentityPattern = /^[a-zA-Z0-9_.\-:]+$/;
+                    if (sessionId && !safeIdentityPattern.test(sessionId)) {
+                        sendShellMessage(ws, { type: 'error', message: 'Invalid session ID' });
+                        return;
+                    }
+
+                    if (!safeIdentityPattern.test(terminalTabId)) {
+                        sendShellMessage(ws, { type: 'error', message: 'Invalid terminal tab ID' });
                         return;
                     }
 
@@ -1755,7 +1780,7 @@ function handleShellConnection(ws) {
                                 if (sess && sess.cliSessionId) {
                                     resumeId = sess.cliSessionId;
                                     // Validate the looked-up CLI session ID too
-                                    if (!safeSessionIdPattern.test(resumeId)) {
+                                    if (!safeIdentityPattern.test(resumeId)) {
                                         resumeId = null;
                                     }
                                 }
@@ -1793,8 +1818,9 @@ function handleShellConnection(ws) {
                     const termCols = data.cols || 80;
                     const termRows = data.rows || 24;
                     console.log('📐 Using terminal dimensions:', termCols, 'x', termRows);
+                    emitShellStatus(ws, 'connecting', false);
 
-                    shellProcess = pty.spawn(shell, shellArgs, {
+                    const spawnedShellProcess = pty.spawn(shell, shellArgs, {
                         name: 'xterm-256color',
                         cols: termCols,
                         rows: termRows,
@@ -1806,22 +1832,25 @@ function handleShellConnection(ws) {
                             FORCE_COLOR: '3'
                         }
                     });
+                    shellProcess = spawnedShellProcess;
 
-                    console.log('🟢 Shell process started with PTY, PID:', shellProcess.pid);
+                    console.log('🟢 Shell process started with PTY, PID:', spawnedShellProcess.pid);
 
                     ptySessionsMap.set(ptySessionKey, {
-                        pty: shellProcess,
+                        pty: spawnedShellProcess,
                         ws: ws,
                         buffer: [],
                         timeoutId: null,
                         projectPath,
-                        sessionId
+                        sessionId,
+                        terminalTabId
                     });
+                    emitShellStatus(ws, 'live', false);
 
                     // Handle data output
-                    shellProcess.onData((data) => {
+                    spawnedShellProcess.onData((data) => {
                         const session = ptySessionsMap.get(ptySessionKey);
-                        if (!session) return;
+                        if (!session || session.pty !== spawnedShellProcess) return;
 
                         if (session.buffer.length < 5000) {
                             session.buffer.push(data);
@@ -1848,11 +1877,11 @@ function handleShellConnection(ws) {
                                 const isNewUrl = !announcedAuthUrls.has(normalizedUrl);
                                 if (isNewUrl) {
                                     announcedAuthUrls.add(normalizedUrl);
-                                    session.ws.send(JSON.stringify({
+                                    sendShellMessage(session.ws, {
                                         type: 'auth_url',
                                         url: normalizedUrl,
                                         autoOpen
-                                    }));
+                                    });
                                 }
 
                             };
@@ -1876,36 +1905,50 @@ function handleShellConnection(ws) {
                             }
 
                             // Send regular output
-                            session.ws.send(JSON.stringify({
+                            sendShellMessage(session.ws, {
                                 type: 'output',
                                 data: outputData
-                            }));
+                            });
                         }
                     });
 
                     // Handle process exit
-                    shellProcess.onExit((exitCode) => {
+                    spawnedShellProcess.onExit((exitCode) => {
                         console.log('🔚 Shell process exited with code:', exitCode.exitCode, 'signal:', exitCode.signal);
                         const session = ptySessionsMap.get(ptySessionKey);
+                        if (session && session.pty !== spawnedShellProcess) {
+                            return;
+                        }
+
                         if (session && session.ws && session.ws.readyState === WebSocket.OPEN) {
-                            session.ws.send(JSON.stringify({
+                            sendShellMessage(session.ws, {
                                 type: 'output',
                                 data: `\r\n\x1b[33mProcess exited with code ${exitCode.exitCode}${exitCode.signal ? ` (${exitCode.signal})` : ''}\x1b[0m\r\n`
-                            }));
+                            });
+                            sendShellMessage(session.ws, {
+                                type: 'process_exit',
+                                terminalTabId,
+                                exitCode: exitCode.exitCode,
+                                signal: exitCode.signal ?? null
+                            });
                         }
                         if (session && session.timeoutId) {
                             clearTimeout(session.timeoutId);
                         }
-                        ptySessionsMap.delete(ptySessionKey);
-                        shellProcess = null;
+                        if (ptySessionsMap.get(ptySessionKey)?.pty === spawnedShellProcess) {
+                            ptySessionsMap.delete(ptySessionKey);
+                        }
+                        if (shellProcess === spawnedShellProcess) {
+                            shellProcess = null;
+                        }
                     });
 
                 } catch (spawnError) {
                     console.error('[ERROR] Error spawning process:', spawnError);
-                    ws.send(JSON.stringify({
+                    sendShellMessage(ws, {
                         type: 'output',
                         data: `\r\n\x1b[31mError: ${spawnError.message}\x1b[0m\r\n`
-                    }));
+                    });
                 }
 
             } else if (data.type === 'input') {
@@ -1945,6 +1988,10 @@ function handleShellConnection(ws) {
             if (session) {
                 console.log('⏳ PTY session kept alive, will timeout in 30 minutes:', ptySessionKey);
                 session.ws = null;
+                session.lastStatus = {
+                    phase: 'disconnected',
+                    terminalTabId
+                };
 
                 session.timeoutId = setTimeout(() => {
                     console.log('⏰ PTY session timeout, killing process:', ptySessionKey);

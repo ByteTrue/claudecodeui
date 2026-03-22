@@ -323,6 +323,8 @@ export default function IntegratedTerminalPanel({
         <StandaloneShell
           project={boundProject}
           session={boundSession}
+          terminalTabId={activeTab.id}
+          restartNonce={activeTab.restartNonce}
           showHeader={false}
           showShellHeader={false}
           isActive={isOpen}

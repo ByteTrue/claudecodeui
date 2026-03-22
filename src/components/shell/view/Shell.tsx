@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@xterm/xterm/css/xterm.css';
 import type { Project, ProjectSession } from '../../../types/app';
-import type { ShellStatusSnapshot } from '../types/types';
+import type { ShellIncomingMessage, ShellStatusPhase, ShellStatusSnapshot } from '../types/types';
 import {
   PROMPT_BUFFER_SCAN_LINES,
   PROMPT_DEBOUNCE_MS,
@@ -25,6 +25,8 @@ type CliPromptOption = { number: string; label: string };
 type ShellProps = {
   selectedProject?: Project | null;
   selectedSession?: ProjectSession | null;
+  terminalTabId?: string;
+  restartNonce?: number;
   initialCommand?: string | null;
   isPlainShell?: boolean;
   showHeader?: boolean;
@@ -35,9 +37,84 @@ type ShellProps = {
   onStatusChange?: ((status: ShellStatusSnapshot) => void) | null;
 };
 
+type ShellStatusAction =
+  | {
+      type: 'runtime';
+      phase: ShellStatusPhase;
+      canRetry: boolean;
+    }
+  | {
+      type: 'status';
+      phase: Exclude<ShellStatusPhase, 'loading'>;
+      canRetry?: boolean;
+    }
+  | {
+      type: 'process_exit';
+      exitCode: number | null;
+    };
+
+const INITIAL_SHELL_STATUS: ShellStatusSnapshot = {
+  phase: 'loading',
+  canRetry: false,
+  exitCode: null,
+};
+
+const reduceShellStatus = (
+  currentStatus: ShellStatusSnapshot,
+  action: ShellStatusAction,
+): ShellStatusSnapshot => {
+  if (action.type === 'process_exit') {
+    return {
+      phase: 'exited',
+      canRetry: true,
+      exitCode: action.exitCode,
+    };
+  }
+
+  if (action.type === 'status') {
+    if (action.phase === 'live') {
+      return {
+        phase: 'live',
+        canRetry: false,
+        exitCode: null,
+      };
+    }
+
+    if (action.phase === 'disconnected' && currentStatus.phase === 'exited') {
+      return currentStatus;
+    }
+
+    return {
+      phase: action.phase,
+      canRetry: action.canRetry ?? action.phase === 'disconnected',
+      exitCode: action.phase === 'exited' ? currentStatus.exitCode : null,
+    };
+  }
+
+  if (action.phase === 'live') {
+    return {
+      phase: 'live',
+      canRetry: false,
+      exitCode: null,
+    };
+  }
+
+  if (action.phase === 'disconnected' && currentStatus.phase === 'exited') {
+    return currentStatus;
+  }
+
+  return {
+    phase: action.phase,
+    canRetry: action.canRetry,
+    exitCode: action.phase === 'disconnected' ? currentStatus.exitCode : null,
+  };
+};
+
 export default function Shell({
   selectedProject = null,
   selectedSession = null,
+  terminalTabId = 'shell',
+  restartNonce = 0,
   initialCommand = null,
   isPlainShell = false,
   showHeader = true,
@@ -49,9 +126,44 @@ export default function Shell({
 }: ShellProps) {
   const { t } = useTranslation('chat');
   const [isRestarting, setIsRestarting] = useState(false);
+  const [manualRestartNonce, setManualRestartNonce] = useState(0);
   const [cliPromptOptions, setCliPromptOptions] = useState<CliPromptOption[] | null>(null);
+  const [shellStatus, dispatchShellStatus] = useReducer(reduceShellStatus, INITIAL_SHELL_STATUS);
   const promptCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onOutputRef = useRef<(() => void) | null>(null);
+  const effectiveRestartNonce = restartNonce + manualRestartNonce;
+  const handleShellMessage = useCallback((message: ShellIncomingMessage) => {
+    const messageTabId = 'terminalTabId' in message && typeof message.terminalTabId === 'string'
+      ? message.terminalTabId
+      : null;
+    if (
+      (message.type === 'status' || message.type === 'process_exit') &&
+      messageTabId !== terminalTabId
+    ) {
+      return;
+    }
+
+    if (
+      message.type === 'status' &&
+      (message.phase === 'connecting'
+        || message.phase === 'live'
+        || message.phase === 'disconnected'
+        || message.phase === 'exited')
+    ) {
+      dispatchShellStatus({
+        type: 'status',
+        phase: message.phase,
+        canRetry: typeof message.canRetry === 'boolean' ? message.canRetry : undefined,
+      });
+    }
+
+    if (message.type === 'process_exit') {
+      dispatchShellStatus({
+        type: 'process_exit',
+        exitCode: typeof message.exitCode === 'number' ? message.exitCode : null,
+      });
+    }
+  }, [terminalTabId]);
 
   const {
     terminalContainerRef,
@@ -69,12 +181,15 @@ export default function Shell({
   } = useShellRuntime({
     selectedProject,
     selectedSession,
+    terminalTabId,
+    restartNonce: effectiveRestartNonce,
     initialCommand,
     isPlainShell,
     minimal,
     autoConnect,
     isRestarting,
     onProcessComplete,
+    onShellMessage: handleShellMessage,
     onOutputRef,
   });
 
@@ -196,18 +311,27 @@ export default function Shell({
 
   const handleRestartShell = useCallback(() => {
     setIsRestarting(true);
+    setManualRestartNonce((current) => current + 1);
     window.setTimeout(() => {
       setIsRestarting(false);
     }, SHELL_RESTART_DELAY_MS);
   }, []);
 
-  const shellStatus = useMemo<ShellStatusSnapshot>(
-    () => ({
-      phase: !isInitialized ? 'loading' : isConnecting ? 'connecting' : isConnected ? 'live' : 'disconnected',
+  useEffect(() => {
+    const nextPhase: ShellStatusPhase = !isInitialized
+      ? 'loading'
+      : isConnecting
+        ? 'connecting'
+        : isConnected
+          ? 'live'
+          : 'disconnected';
+
+    dispatchShellStatus({
+      type: 'runtime',
+      phase: nextPhase,
       canRetry: isInitialized && !isConnecting && !isConnected,
-    }),
-    [isConnected, isConnecting, isInitialized],
-  );
+    });
+  }, [isConnected, isConnecting, isInitialized]);
 
   useEffect(() => {
     onStatusChange?.(shellStatus);

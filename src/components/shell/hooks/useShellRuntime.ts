@@ -9,12 +9,15 @@ import { useShellTerminal } from './useShellTerminal';
 export function useShellRuntime({
   selectedProject,
   selectedSession,
+  terminalTabId,
+  restartNonce,
   initialCommand,
   isPlainShell,
   minimal,
   autoConnect,
   isRestarting,
   onProcessComplete,
+  onShellMessage,
   onOutputRef,
 }: UseShellRuntimeOptions): UseShellRuntimeResult {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
@@ -27,20 +30,35 @@ export function useShellRuntime({
 
   const selectedProjectRef = useRef(selectedProject);
   const selectedSessionRef = useRef(selectedSession);
+  const terminalTabIdRef = useRef(terminalTabId);
+  const restartNonceRef = useRef(restartNonce);
   const initialCommandRef = useRef(initialCommand);
   const isPlainShellRef = useRef(isPlainShell);
   const onProcessCompleteRef = useRef(onProcessComplete);
+  const onShellMessageRef = useRef(onShellMessage);
   const authUrlRef = useRef('');
-  const lastSessionIdRef = useRef<string | null>(selectedSession?.id ?? null);
+  const lastTabIdentityRef = useRef(`${terminalTabId}:${restartNonce}`);
 
   // Keep mutable values in refs so websocket handlers always read current data.
   useEffect(() => {
     selectedProjectRef.current = selectedProject;
     selectedSessionRef.current = selectedSession;
+    terminalTabIdRef.current = terminalTabId;
+    restartNonceRef.current = restartNonce;
     initialCommandRef.current = initialCommand;
     isPlainShellRef.current = isPlainShell;
     onProcessCompleteRef.current = onProcessComplete;
-  }, [selectedProject, selectedSession, initialCommand, isPlainShell, onProcessComplete]);
+    onShellMessageRef.current = onShellMessage;
+  }, [
+    selectedProject,
+    selectedSession,
+    terminalTabId,
+    restartNonce,
+    initialCommand,
+    isPlainShell,
+    onProcessComplete,
+    onShellMessage,
+  ]);
 
   const setCurrentAuthUrl = useCallback((nextAuthUrl: string) => {
     authUrlRef.current = nextAuthUrl;
@@ -111,9 +129,13 @@ export function useShellRuntime({
     fitAddonRef,
     selectedProjectRef,
     selectedSessionRef,
+    terminalTabIdRef,
+    restartNonce,
+    restartNonceRef,
     initialCommandRef,
     isPlainShellRef,
     onProcessCompleteRef,
+    onShellMessageRef,
     isInitialized,
     autoConnect,
     closeSocket,
@@ -141,13 +163,13 @@ export function useShellRuntime({
   }, [disconnectFromShell, disposeTerminal, selectedProject]);
 
   useEffect(() => {
-    const currentSessionId = selectedSession?.id ?? null;
-    if (lastSessionIdRef.current !== currentSessionId && isInitialized) {
+    const currentTabIdentity = `${terminalTabId}:${restartNonce}`;
+    if (lastTabIdentityRef.current !== currentTabIdentity && isInitialized) {
       disconnectFromShell();
     }
 
-    lastSessionIdRef.current = currentSessionId;
-  }, [disconnectFromShell, isInitialized, selectedSession?.id]);
+    lastTabIdentityRef.current = currentTabIdentity;
+  }, [disconnectFromShell, isInitialized, restartNonce, terminalTabId]);
 
   return {
     terminalContainerRef,

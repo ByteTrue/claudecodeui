@@ -8,6 +8,8 @@ import StandaloneShellHeader from './subcomponents/StandaloneShellHeader';
 type StandaloneShellProps = {
   project?: Project | null;
   session?: ProjectSession | null;
+  terminalTabId?: string;
+  restartNonce?: number;
   command?: string | null;
   isPlainShell?: boolean | null;
   isActive?: boolean;
@@ -26,6 +28,8 @@ type StandaloneShellProps = {
 export default function StandaloneShell({
   project = null,
   session = null,
+  terminalTabId = 'standalone-shell',
+  restartNonce = 0,
   command = null,
   isPlainShell = null,
   isActive = true,
@@ -69,6 +73,8 @@ export default function StandaloneShell({
         <Shell
           selectedProject={project}
           selectedSession={session}
+          terminalTabId={terminalTabId}
+          restartNonce={restartNonce}
           initialCommand={command}
           isPlainShell={shouldUsePlainShell}
           showHeader={showShellHeader}

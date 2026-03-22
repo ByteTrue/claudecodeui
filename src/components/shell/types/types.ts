@@ -4,17 +4,20 @@ import type { Terminal } from '@xterm/xterm';
 import type { Project, ProjectSession } from '../../../types/app';
 
 export type AuthCopyStatus = 'idle' | 'copied' | 'failed';
-export type ShellStatusPhase = 'loading' | 'connecting' | 'live' | 'disconnected';
+export type ShellStatusPhase = 'loading' | 'connecting' | 'live' | 'disconnected' | 'exited';
 
 export type ShellStatusSnapshot = {
   phase: ShellStatusPhase;
   canRetry: boolean;
+  exitCode: number | null;
 };
 
 export type ShellInitMessage = {
   type: 'init';
   projectPath: string;
   sessionId: string | null;
+  terminalTabId: string;
+  forceFresh: boolean;
   hasSession: boolean;
   provider: string;
   cols: number;
@@ -36,21 +39,40 @@ export type ShellInputMessage = {
 
 export type ShellOutgoingMessage = ShellInitMessage | ShellResizeMessage | ShellInputMessage;
 
+export type ShellStatusMessage = {
+  type: 'status';
+  phase: Exclude<ShellStatusPhase, 'loading'>;
+  terminalTabId: string;
+  canRetry?: boolean;
+};
+
+export type ShellProcessExitMessage = {
+  type: 'process_exit';
+  terminalTabId: string;
+  exitCode: number | null;
+  signal?: number | string | null;
+};
+
 export type ShellIncomingMessage =
   | { type: 'output'; data: string }
   | { type: 'auth_url'; url?: string }
   | { type: 'url_open'; url?: string }
+  | ShellStatusMessage
+  | ShellProcessExitMessage
   | { type: string; [key: string]: unknown };
 
 export type UseShellRuntimeOptions = {
   selectedProject: Project | null | undefined;
   selectedSession: ProjectSession | null | undefined;
+  terminalTabId: string;
+  restartNonce: number;
   initialCommand: string | null | undefined;
   isPlainShell: boolean;
   minimal: boolean;
   autoConnect: boolean;
   isRestarting: boolean;
   onProcessComplete?: ((exitCode: number) => void) | null;
+  onShellMessage?: ((message: ShellIncomingMessage) => void) | null;
   onOutputRef?: MutableRefObject<(() => void) | null>;
 };
 
@@ -61,9 +83,12 @@ export type ShellSharedRefs = {
   authUrlRef: MutableRefObject<string>;
   selectedProjectRef: MutableRefObject<Project | null | undefined>;
   selectedSessionRef: MutableRefObject<ProjectSession | null | undefined>;
+  terminalTabIdRef: MutableRefObject<string>;
+  restartNonceRef: MutableRefObject<number>;
   initialCommandRef: MutableRefObject<string | null | undefined>;
   isPlainShellRef: MutableRefObject<boolean>;
   onProcessCompleteRef: MutableRefObject<((exitCode: number) => void) | null | undefined>;
+  onShellMessageRef: MutableRefObject<((message: ShellIncomingMessage) => void) | null | undefined>;
 };
 
 export type UseShellRuntimeResult = {

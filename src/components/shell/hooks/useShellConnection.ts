@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { Terminal } from '@xterm/xterm';
 import type { Project, ProjectSession } from '../../../types/app';
+import type { ShellIncomingMessage } from '../types/types';
 import { TERMINAL_INIT_DELAY_MS } from '../constants/constants';
 import { getShellWebSocketUrl, parseShellMessage, sendSocketMessage } from '../utils/socket';
 
@@ -16,9 +17,13 @@ type UseShellConnectionOptions = {
   fitAddonRef: MutableRefObject<FitAddon | null>;
   selectedProjectRef: MutableRefObject<Project | null | undefined>;
   selectedSessionRef: MutableRefObject<ProjectSession | null | undefined>;
+  terminalTabIdRef: MutableRefObject<string>;
+  restartNonce: number;
+  restartNonceRef: MutableRefObject<number>;
   initialCommandRef: MutableRefObject<string | null | undefined>;
   isPlainShellRef: MutableRefObject<boolean>;
   onProcessCompleteRef: MutableRefObject<((exitCode: number) => void) | null | undefined>;
+  onShellMessageRef: MutableRefObject<((message: ShellIncomingMessage) => void) | null | undefined>;
   isInitialized: boolean;
   autoConnect: boolean;
   closeSocket: () => void;
@@ -41,9 +46,13 @@ export function useShellConnection({
   fitAddonRef,
   selectedProjectRef,
   selectedSessionRef,
+  terminalTabIdRef,
+  restartNonce,
+  restartNonceRef,
   initialCommandRef,
   isPlainShellRef,
   onProcessCompleteRef,
+  onShellMessageRef,
   isInitialized,
   autoConnect,
   closeSocket,
@@ -54,6 +63,7 @@ export function useShellConnection({
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const connectingRef = useRef(false);
+  const lastInitRestartNonceRef = useRef(restartNonce);
 
   const handleProcessCompletion = useCallback(
     (output: string) => {
@@ -97,6 +107,11 @@ export function useShellConnection({
         return;
       }
 
+      if (message.type === 'status' || message.type === 'process_exit') {
+        onShellMessageRef.current?.(message);
+        return;
+      }
+
       if (message.type === 'auth_url' || message.type === 'url_open') {
         const nextAuthUrl = typeof message.url === 'string' ? message.url : '';
         if (nextAuthUrl) {
@@ -104,7 +119,7 @@ export function useShellConnection({
         }
       }
     },
-    [handleProcessCompletion, onOutputRef, setAuthUrl, terminalRef],
+    [handleProcessCompletion, onOutputRef, onShellMessageRef, setAuthUrl, terminalRef],
   );
 
   const connectWebSocket = useCallback(
@@ -141,11 +156,15 @@ export function useShellConnection({
             }
 
             currentFitAddon.fit();
+            const currentRestartNonce = restartNonceRef.current;
+            const forceFresh = currentRestartNonce !== lastInitRestartNonceRef.current;
 
             sendSocketMessage(socket, {
               type: 'init',
               projectPath: currentProject.fullPath || currentProject.path || '',
               sessionId: isPlainShellRef.current ? null : selectedSessionRef.current?.id || null,
+              terminalTabId: terminalTabIdRef.current,
+              forceFresh,
               hasSession: isPlainShellRef.current ? false : Boolean(selectedSessionRef.current),
               provider: isPlainShellRef.current ? 'plain-shell' : (selectedSessionRef.current?.__provider || localStorage.getItem('selected-provider') || 'claude'),
               cols: currentTerminal.cols,
@@ -153,6 +172,8 @@ export function useShellConnection({
               initialCommand: initialCommandRef.current,
               isPlainShell: isPlainShellRef.current,
             });
+
+            lastInitRestartNonceRef.current = currentRestartNonce;
           }, TERMINAL_INIT_DELAY_MS);
         };
 
@@ -190,7 +211,9 @@ export function useShellConnection({
       selectedProjectRef,
       selectedSessionRef,
       setAuthUrl,
+      restartNonceRef,
       terminalRef,
+      terminalTabIdRef,
       wsRef,
     ],
   );
