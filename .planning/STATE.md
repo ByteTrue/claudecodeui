@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_for_next_phase
-stopped_at: Phase 2 completed after browser-assisted UAT
-last_updated: "2026-03-21T05:06:02.000Z"
+stopped_at: Phase 3 completed after browser-assisted multi-tab UAT
+last_updated: "2026-03-22T17:29:24.000Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
   percent: 100
 ---
 
@@ -20,11 +20,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** Users should be able to do their normal project work inside the app without breaking flow or leaving to a separate terminal window.
-**Current focus:** Phase 03 — ready for planning
+**Current focus:** Phase 04 — ready for planning
 
 ## Current Position
 
-Phase: 03 (multi-session-terminal-tabs) — READY FOR PLANNING
+Phase: 04 (mobile-and-workflow-continuity) — READY FOR PLANNING
 Plan: 0 of 3
 Progress: [██████████] 100%
 
@@ -32,9 +32,9 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 5
-- Average duration: 7 min
-- Total execution time: 0.6 hours
+- Total plans completed: 8
+- Average duration: 11 min
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
@@ -42,14 +42,18 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 01 | 3 | 22 min | 7 min |
 | 02 | 2 | 12 min | 6 min |
+| 03 | 3 | 53 min | 18 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 19 min, 1 min, 2 min, 9 min, 3 min
-- Trend: Stable
+- Last 5 plans: 9 min, 3 min, 25 min, 25 min, 3 min
+- Trend: Runtime-heavy because Phase 3 required browser-assisted PTY validation
 
 | Phase 02 P01 | 9 min | 3 tasks | 6 files |
 | Phase 02 P02 | 3 min | 3 tasks | 10 files |
+| Phase 03 P01 | 25 min | 3 tasks | 7 files |
+| Phase 03 P02 | 25 min | 3 tasks | 7 files |
+| Phase 03 P03 | 3 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -69,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Resolve bound terminal project and session separately from the viewed workspace — Prevents sidebar navigation from silently retargeting an active integrated terminal.
 - [Phase 02]: Emit shell status snapshots from Shell to integrated consumers — Keeps the integrated panel lightweight and avoids duplicating socket-state inference in the header layer.
 - [Phase 02]: Use flex and min-h-0 layout for the integrated terminal body — Preserves the existing xterm fit pipeline under a richer header without hard-coded height offsets.
+- [Phase 03]: Store integrated terminal state as explicit `tabs` plus `activeTabId` — Makes tab lifecycle deterministic and keeps inactive terminals addressable.
+- [Phase 03]: Use `terminalTabId` plus `restartNonce` to separate tab switching from same-tab restart — Prevents PTY collisions and preserves inactive tabs during active-tab changes.
+- [Phase 03]: Key the visible shell by `activeTab.id` and render inactive chips from stored tab state — Reconnects the correct PTY on tab switch while keeping each tab's lifecycle history independent.
 
 ### Pending Todos
 
@@ -76,11 +83,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Mobile keyboard and viewport behavior may force UI compromises during implementation
-- No active blockers recorded at the end of Phase 2
+- Phase 4 still needs mobile keyboard and major-view continuity work even though Phase 3 tab UI passed a basic mobile spot-check
+- Disconnect and recovery polish remain for Phase 5, but tab-scoped lifecycle plumbing is now in place
 
 ## Session Continuity
 
-Last session: 2026-03-21T05:06:02.000Z
-Stopped at: Phase 2 completed after browser-assisted UAT
+Last session: 2026-03-22T17:29:24.000Z
+Stopped at: Phase 3 completed after browser-assisted multi-tab UAT
 Resume file: .planning/ROADMAP.md

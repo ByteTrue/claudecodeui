@@ -15,11 +15,11 @@
 
 ### Sessions
 
-- [ ] **SESS-01**: User can create a new terminal tab from the integrated terminal panel
-- [ ] **SESS-02**: User can switch between multiple terminal tabs without restarting other active tabs
-- [ ] **SESS-03**: User can close an individual terminal tab
-- [ ] **SESS-04**: User can restart an individual terminal session from the UI
-- [ ] **SESS-05**: User can see each terminal tab's state such as connecting, running, disconnected, or exited
+- [x] **SESS-01**: User can create a new terminal tab from the integrated terminal panel
+- [x] **SESS-02**: User can switch between multiple terminal tabs without restarting other active tabs
+- [x] **SESS-03**: User can close an individual terminal tab
+- [x] **SESS-04**: User can restart an individual terminal session from the UI
+- [x] **SESS-05**: User can see each terminal tab's state such as connecting, running, disconnected, or exited
 - [ ] **SESS-06**: User does not lose terminal output or active process state when switching between major app views during the same session
 
 ### Terminal Operation
@@ -75,11 +75,11 @@
 | INTE-05 | Phase 2 | Complete |
 | TERM-01 | Phase 2 | Complete |
 | TERM-02 | Phase 2 | Complete |
-| SESS-01 | Phase 3 | Pending |
-| SESS-02 | Phase 3 | Pending |
-| SESS-03 | Phase 3 | Pending |
-| SESS-04 | Phase 3 | Pending |
-| SESS-05 | Phase 3 | Pending |
+| SESS-01 | Phase 3 | Complete |
+| SESS-02 | Phase 3 | Complete |
+| SESS-03 | Phase 3 | Complete |
+| SESS-04 | Phase 3 | Complete |
+| SESS-05 | Phase 3 | Complete |
 | SESS-06 | Phase 4 | Pending |
 | MOBL-01 | Phase 4 | Pending |
 | MOBL-02 | Phase 4 | Pending |
@@ -96,4 +96,4 @@
 
 ---
 *Requirements defined: 2026-03-16*
-*Last updated: 2026-03-20 after Phase 2 Plan 02 completion*
+*Last updated: 2026-03-23 after Phase 3 completion*

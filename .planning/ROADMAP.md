@@ -8,7 +8,7 @@ This roadmap turns the existing shell infrastructure into a workspace-native ter
 
 - [x] **Phase 1: Integrated Terminal Panel** - Add a bottom-panel terminal that feels native to the existing workspace layout (completed 2026-03-16)
 - [x] **Phase 2: Project-Aware Terminal Launch** - Make integrated terminals launch and behave in the current project context (completed 2026-03-21)
-- [ ] **Phase 3: Multi-Session Terminal Tabs** - Add tabbed terminal sessions with explicit lifecycle and status handling
+- [x] **Phase 3: Multi-Session Terminal Tabs** - Add tabbed terminal sessions with explicit lifecycle and status handling (completed 2026-03-23)
 - [ ] **Phase 4: Mobile And Workflow Continuity** - Preserve terminal state during normal app use and make the feature core-usable on mobile
 - [ ] **Phase 5: Terminal Hardening And Recovery** - Polish terminal interactions, safe link behavior, and disconnect/recovery UX
 
@@ -56,9 +56,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Add frontend terminal tab state, creation, selection, close, and restart controls
-- [ ] 03-02: Extend backend/session coordination for stable tab-to-terminal identity and status reporting
-- [ ] 03-03: Harden tab switching behavior so inactive tabs remain intact while the active tab changes
+- [x] 03-01: Add frontend terminal tab state, creation, selection, close, and restart controls
+- [x] 03-02: Extend backend/session coordination for stable tab-to-terminal identity and status reporting
+- [x] 03-03: Harden tab switching behavior so inactive tabs remain intact while the active tab changes
 
 ### Phase 4: Mobile And Workflow Continuity
 **Goal**: Terminal sessions survive normal app navigation and remain core-usable on mobile.
@@ -96,6 +96,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Integrated Terminal Panel | 3/3 | Complete   | 2026-03-16 |
 | 2. Project-Aware Terminal Launch | 2/2 | Complete | 2026-03-21 |
-| 3. Multi-Session Terminal Tabs | 0/3 | Not started | - |
+| 3. Multi-Session Terminal Tabs | 3/3 | Complete | 2026-03-23 |
 | 4. Mobile And Workflow Continuity | 0/3 | Not started | - |
 | 5. Terminal Hardening And Recovery | 0/2 | Not started | - |
